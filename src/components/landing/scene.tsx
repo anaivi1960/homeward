@@ -42,11 +42,11 @@ function Diorama({ still, anchors, onStage }: { still: boolean; anchors: Anchors
     return () => all.forEach((action) => void action.stop());
   }, [actions, names, mixer, still]);
 
-  // Fit both islands at any width.
+  // Fit both islands at any width and height.
   useEffect(() => {
-    camera.zoom = Math.min(Math.max(size.width / 20, 17), 60);
+    camera.zoom = Math.min(size.width / 20, size.height / 8.8, 64);
     camera.updateProjectionMatrix();
-  }, [camera, size.width]);
+  }, [camera, size.width, size.height]);
 
   const labels = useMemo(() => {
     // Blender emission strengths blow out to white here; keep the glow but hold the colour.

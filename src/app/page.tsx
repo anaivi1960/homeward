@@ -41,20 +41,21 @@ export default function Landing() {
       </header>
 
       <main>
-        <section className="dot-grid relative">
+        <section className="dot-grid relative flex min-h-[calc(100svh-4rem)] flex-col">
           <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-bg via-transparent to-bg" />
-          <div className="relative mx-auto max-w-[1120px] px-4 pt-14 text-center sm:pt-20">
-            <p className="label inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-text-muted">
-              <span className="block size-1.5 rotate-45 bg-signal" />
-              Houston → Enugu · Paid with PayPal
-            </p>
-            <h1 className="mx-auto mt-6 max-w-[14ch] text-[44px] leading-[1.02] font-semibold sm:text-[76px]">
+          <div className="relative mx-auto min-h-[240px] w-full max-w-[1280px] flex-1">
+            <div className="absolute inset-0">
+              <HeroScene />
+            </div>
+          </div>
+          <div className="relative mx-auto max-w-[1120px] px-4 pb-8 text-center sm:pb-10">
+            <h1 className="mx-auto text-[34px] leading-[1.05] font-semibold sm:text-[clamp(40px,6.5vh,60px)]">
               Mum&rsquo;s medicine, handled from here.
             </h1>
-            <p className="mx-auto mt-5 max-w-[52ch] text-lg text-text-muted">
+            <p className="mx-auto mt-3 max-w-[60ch] text-lg text-text-muted">
               Order medicine from a verified pharmacy in Nigeria, pay it directly, and see the moment it&rsquo;s picked up.
             </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link href="/app" className="btn">
                 Order medicine
               </Link>
@@ -62,9 +63,6 @@ export default function Landing() {
                 How it works
               </a>
             </div>
-          </div>
-          <div className="relative mx-auto max-w-[1280px]">
-            <HeroScene />
           </div>
         </section>
 
