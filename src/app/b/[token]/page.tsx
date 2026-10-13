@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { AutoRefresh } from '@/components/auto-refresh';
 import { Brand } from '@/components/brand';
+import { ReportForm, ReportStatus } from '@/components/problem-report';
 import { formatTime, StatusChip } from '@/components/status-chip';
 import { getPaymentByToken } from '@/lib/plans';
 
@@ -11,15 +12,17 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
   const { token } = await params;
   const found = await getPaymentByToken(token);
   if (!found) notFound();
-  const { payment, plan } = found;
-  const pickedUp = payment.status === 'collected';
+  const { payment, plan, report } = found;
+  const pickedUp = Boolean(payment.collectedAt);
+  // Cancelled by the payer before pickup, whether or not the refund has arrived yet.
+  const cancelled = !pickedUp && payment.status !== 'ready_for_pickup';
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[520px] flex-col gap-4 p-4 py-8">
       <AutoRefresh />
       <Brand />
       <h1 className="mt-8 text-[36px] leading-[1.05] font-semibold">
-        {pickedUp ? 'Picked up. Thank you.' : 'Your medicine is paid for.'}
+        {pickedUp ? 'Picked up. Thank you.' : cancelled ? 'This order was cancelled.' : 'Your medicine is paid for.'}
       </h1>
 
       <section className="card mt-2 p-6">
@@ -39,8 +42,23 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
         </ul>
 
         {pickedUp ? (
+          <>
+            <p className="mt-5 text-sm text-text-muted">
+              Picked up {payment.collectedAt && formatTime(payment.collectedAt)}.
+            </p>
+            <div className="mt-5">
+              {report ? (
+                <ReportStatus report={report} pharmacy={plan.merchantName} />
+              ) : (
+                payment.status === 'collected' && (
+                  <ReportForm hidden={{ name: 'token', value: token }} summary="Something wrong with the medicine?" />
+                )
+              )}
+            </div>
+          </>
+        ) : cancelled ? (
           <p className="mt-5 text-sm text-text-muted">
-            Picked up {payment.collectedAt && formatTime(payment.collectedAt)}.
+            The person who paid cancelled it and is getting their money back, so there is nothing to collect.
           </p>
         ) : (
           <>

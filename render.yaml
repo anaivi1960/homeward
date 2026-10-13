@@ -1,0 +1,39 @@
+# Render Blueprint: New > Blueprint in the Render dashboard, pick this repo, then fill in the
+# values marked "sync: false". Render sets RENDER_EXTERNAL_URL itself; the app uses it for the
+# links it sends out.
+services:
+  - type: web
+    name: homeward
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: PAYPAL_ENVIRONMENT
+        value: SANDBOX
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      # After the first deploy, register https://<service>.onrender.com/api/webhooks/paypal in the
+      # PayPal developer dashboard and paste the webhook id here.
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: PAYPAL_SANDBOX_MERCHANT_EMAILS
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_WORKSPACE_ID
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      # Optional integrations; the app runs without them.
+      - key: ZAPIER_HOOK_URL
+        sync: false
+      - key: ELASTICSEARCH_URL
+        sync: false
+      - key: ELASTICSEARCH_API_KEY
+        sync: false

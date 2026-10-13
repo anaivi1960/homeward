@@ -2,6 +2,7 @@
 
 import { useChat } from '@ai-sdk/react';
 import type { CarePlan } from '@/lib/plans';
+import { PageIntro } from './page-intro';
 import { PlanCard } from './plan-card';
 
 const starters = [
@@ -18,15 +19,14 @@ export function Chat() {
     <div className="flex min-h-[calc(100dvh-56px)] flex-col">
       <div className="mx-auto w-full max-w-[720px] flex-1 space-y-4 p-4 pb-32">
         {messages.length === 0 && (
-          <div className="pt-12 sm:pt-20">
-            <p className="label text-text-muted">New order</p>
-            <h1 className="mt-3 text-[36px] leading-[1.05] font-semibold sm:text-[52px]">
-              What medicine does she need?
-            </h1>
-            <p className="mt-3 max-w-[46ch] text-text-muted">
-              Tell me the medicine and the city. I&rsquo;ll find a verified pharmacy, and you approve the payment.
-            </p>
-            <div className="mt-8 flex flex-col gap-2">
+          <div className="pt-8 sm:pt-14">
+            <PageIntro eyebrow="New order" title="What medicine do they need?" model="/models/tile-medicine.glb">
+              <p className="mt-3 max-w-[40ch] text-text-muted">
+                Tell me the medicine and the city. I&rsquo;ll find a verified pharmacy, and you approve the payment.
+              </p>
+            </PageIntro>
+            <p className="label mt-10 text-text-muted">Try one of these</p>
+            <div className="mt-3 flex flex-col gap-2">
               {starters.map((text) => (
                 <button
                   key={text}

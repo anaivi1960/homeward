@@ -1,11 +1,17 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AutoRefresh } from '@/components/auto-refresh';
 import { Brand } from '@/components/brand';
+import { PageIntro } from '@/components/page-intro';
+import { answerBy } from '@/components/problem-report';
 import { formatTime, StatusChip } from '@/components/status-chip';
+import { problemReasons } from '@/db/schema';
 import { getMerchant } from '@/lib/merchants';
 import { listPayments } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
+
+type Row = Awaited<ReturnType<typeof listPayments>>[number];
 
 // Demo portal: no pharmacy login yet, the pharmacy is chosen by URL.
 export default async function MerchantPortal({
@@ -13,78 +19,154 @@ export default async function MerchantPortal({
   searchParams,
 }: {
   params: Promise<{ merchantId: string }>;
-  searchParams: Promise<{ wrong?: string }>;
+  searchParams: Promise<{ wrong?: string; norefund?: string }>;
 }) {
   const { merchantId } = await params;
-  const { wrong } = await searchParams;
+  const { wrong, norefund } = await searchParams;
   const merchant = getMerchant(merchantId);
   if (!merchant) notFound();
   const rows = await listPayments(merchant.id);
-  const waiting = rows.filter((r) => r.payment.status === 'ready_for_pickup').length;
+  const waiting = rows.filter((r) => r.payment.status === 'ready_for_pickup');
+  const problems = rows.filter((r) => r.report?.status === 'open');
+  const refunds = rows.filter((r) => r.payment.status === 'refund_due');
+  const done = rows.filter((r) => !waiting.includes(r) && !problems.includes(r) && !refunds.includes(r));
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[720px] flex-col gap-4 p-4 py-8">
       {/* Refreshing would clear a half-typed code, so only poll when nothing is waiting on input. */}
-      {waiting === 0 && <AutoRefresh />}
-      <Brand suffix="Pharmacy" />
-      <p className="label mt-8 text-text-muted">
-        {merchant.city} · {waiting} waiting for pickup
-      </p>
-      <h1 className="text-[36px] leading-[1.05] font-semibold sm:text-[52px]">{merchant.name}</h1>
+      {waiting.length === 0 && <AutoRefresh />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Brand suffix="Pharmacy" />
+        <Link href={`/merchant/${merchant.id}/ledger`} className="text-sm text-text-muted hover:text-text">
+          Order ledger →
+        </Link>
+      </div>
+      <div className="mt-6">
+        <PageIntro eyebrow={`${merchant.city} · Pharmacy counter`} title={merchant.name} model="/models/tile-counter.glb">
+          <p className="mt-3 text-text-muted">
+            {waiting.length
+              ? `${waiting.length} paid ${waiting.length === 1 ? 'order' : 'orders'} waiting for pickup. Ask for the code before you hand anything over.`
+              : 'Nothing waiting for pickup. Paid orders appear here as soon as a family pays.'}
+          </p>
+        </PageIntro>
+      </div>
 
-      {rows.length === 0 && (
-        <p className="card mt-4 p-8 text-center text-text-muted">
-          No paid orders yet. They appear here as soon as a family pays.
-        </p>
-      )}
-
-      {rows.map(({ payment, plan }) => (
-        <section key={payment.id} className="card mt-2 p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="font-semibold tracking-tight">For {plan.beneficiary}</p>
-              <p className="label mt-1 text-text-muted">Paid {formatTime(payment.paidAt)}</p>
+      {problems.length > 0 && <h2 className="label mt-6 text-danger">Problems reported</h2>}
+      {problems.map((row) => {
+        const report = row.report!;
+        const overdue = answerBy(report) < new Date();
+        return (
+          <section key={row.payment.id} className="card border-danger! p-5">
+            <OrderSummary row={row} />
+            <div className="mt-5 rounded-control bg-surface-muted p-4 text-sm">
+              <p className="label text-text-muted">
+                {problemReasons[report.reason]} · reported by the {report.reportedBy === 'payer' ? 'payer' : 'customer'}
+              </p>
+              {report.details && <p className="mt-2 whitespace-pre-wrap">{report.details}</p>}
+              <p className={`mt-2 ${overdue ? 'text-danger' : 'text-text-muted'}`}>
+                {overdue ? 'Overdue. Answer now.' : `Answer by ${formatTime(answerBy(report))}.`}
+              </p>
             </div>
-            <StatusChip status={payment.status} />
-          </div>
-          <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
-            {plan.items.map((item) => (
-              <li key={item.name} className="flex justify-between gap-4 py-2.5">
-                <span>
-                  {item.name} <span className="text-text-muted">× {item.quantity}</span>
-                </span>
-                <span className="font-mono tabular-nums">${item.lineUsd}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="amount mt-4 text-2xl font-semibold">${payment.amountUsd}</p>
-
-          {payment.status === 'ready_for_pickup' ? (
-            <form action={`/merchant/${merchant.id}/confirm`} method="post" className="mt-4 flex flex-wrap gap-2">
-              <input type="hidden" name="paymentId" value={payment.id} />
-              <input
-                name="code"
-                required
-                maxLength={6}
-                autoComplete="off"
-                placeholder="CODE"
-                aria-label="Pickup code"
-                className="min-h-11 w-40 rounded-full border border-border bg-surface px-5 font-mono tracking-[0.25em] uppercase outline-none focus:border-text"
-              />
-              <button type="submit" className="btn">
-                Confirm pickup
+            <form action={`/merchant/${merchant.id}/resolve`} method="post" className="mt-4 flex flex-wrap gap-2">
+              <input type="hidden" name="reportId" value={report.id} />
+              <button type="submit" name="answer" value="replaced" className="btn">
+                We&rsquo;ll replace it
+              </button>
+              <button type="submit" name="answer" value="refund" className="btn btn-ghost">
+                We&rsquo;ll refund it
               </button>
             </form>
-          ) : (
-            <p className="label mt-3 text-text-muted">
-              Picked up {payment.collectedAt && formatTime(payment.collectedAt)}
-            </p>
+          </section>
+        );
+      })}
+
+      {refunds.length > 0 && <h2 className="label mt-6 text-warning">Refunds to send</h2>}
+      {refunds.map((row) => (
+        <section key={row.payment.id} className="card p-5">
+          <OrderSummary row={row} />
+          <p className="mt-5 text-sm">
+            {row.payment.collectedAt
+              ? 'You agreed to refund this order.'
+              : 'The payer cancelled before pickup. Do not hand this order over.'}{' '}
+            Refund <span className="font-mono">${row.payment.amountUsd} USD</span> from your PayPal account (PayPal order{' '}
+            <span className="font-mono">{row.payment.paypalOrderId}</span>), then confirm here.
+          </p>
+          <form action={`/merchant/${merchant.id}/refund-check`} method="post" className="mt-4">
+            <input type="hidden" name="paymentId" value={row.payment.id} />
+            <button type="submit" className="btn">
+              I&rsquo;ve refunded it
+            </button>
+          </form>
+          {norefund === row.payment.id && (
+            <p className="mt-3 text-sm text-danger">PayPal doesn&rsquo;t show a full refund for this payment yet.</p>
           )}
-          {wrong === payment.id && (
+        </section>
+      ))}
+
+      {waiting.length > 0 && <h2 className="label mt-6 text-text-muted">Waiting for pickup</h2>}
+      {waiting.map((row) => (
+        <section key={row.payment.id} className="card p-5">
+          <OrderSummary row={row} />
+          <form action={`/merchant/${merchant.id}/confirm`} method="post" className="mt-5 flex flex-wrap gap-2">
+            <input type="hidden" name="paymentId" value={row.payment.id} />
+            <input
+              name="code"
+              required
+              maxLength={6}
+              autoComplete="off"
+              placeholder="6-letter code"
+              aria-label="Pickup code"
+              className="min-h-11 w-48 rounded-full border border-border bg-surface px-5 font-mono tracking-[0.2em] uppercase outline-none placeholder:tracking-normal placeholder:normal-case focus:border-text"
+            />
+            <button type="submit" className="btn">
+              Confirm pickup
+            </button>
+          </form>
+          {wrong === row.payment.id && (
             <p className="mt-3 text-sm text-danger">That code doesn&rsquo;t match this order. Check it and try again.</p>
           )}
         </section>
       ))}
+
+      {done.length > 0 && <h2 className="label mt-6 text-text-muted">Earlier orders</h2>}
+      {done.map((row) => (
+        <section key={row.payment.id} className="card p-5">
+          <OrderSummary row={row} />
+          <p className="label mt-4 text-text-muted">
+            {row.payment.collectedAt ? `Picked up ${formatTime(row.payment.collectedAt)}` : 'Cancelled before pickup'}
+            {row.payment.status === 'refunded' && ' · Refunded to the payer'}
+            {row.report?.status === 'replaced' && ' · Problem reported, replaced'}
+          </p>
+        </section>
+      ))}
     </main>
+  );
+}
+
+function OrderSummary({ row: { payment, plan } }: { row: Row }) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-semibold tracking-tight">For {plan.beneficiary}</p>
+          <p className="label mt-1 text-text-muted">Paid {formatTime(payment.paidAt)}</p>
+        </div>
+        <StatusChip status={payment.status} />
+      </div>
+      <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
+        {plan.items.map((item) => (
+          <li key={item.name} className="flex justify-between gap-4 py-2.5">
+            <span>
+              {item.name} <span className="text-text-muted">× {item.quantity}</span>
+            </span>
+            <span className="font-mono tabular-nums">${item.lineUsd}</span>
+          </li>
+        ))}
+        <li className="flex justify-between gap-4 py-2.5 font-semibold">
+          <span>Paid to you</span>
+          <span className="font-mono tabular-nums">${payment.amountUsd}</span>
+        </li>
+      </ul>
+    </>
   );
 }

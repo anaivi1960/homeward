@@ -22,9 +22,33 @@ export const payments = pgTable('payments', {
   merchantId: text('merchant_id').notNull(),
   paypalOrderId: text('paypal_order_id').notNull().unique(),
   amountUsd: numeric('amount_usd', { precision: 10, scale: 2 }).notNull(),
-  status: text('status').$type<'ready_for_pickup' | 'collected'>().notNull().default('ready_for_pickup'),
+  status: text('status').$type<'ready_for_pickup' | 'collected' | 'refund_due' | 'refunded'>().notNull().default('ready_for_pickup'),
   pickupCode: text('pickup_code').notNull(),
   beneficiaryToken: text('beneficiary_token').notNull().unique(),
   paidAt: timestamp('paid_at', { withTimezone: true }).notNull().defaultNow(),
   collectedAt: timestamp('collected_at', { withTimezone: true }),
+});
+
+export const problemReasons = {
+  wrong_item: 'Wrong medicine or strength',
+  expired: 'Expired or close to expiry',
+  damaged: 'Damaged or opened pack',
+  suspected_fake: 'Looks fake',
+  other: 'Something else',
+} as const;
+export type ProblemReason = keyof typeof problemReasons;
+
+// A complaint about medicine that was picked up. The pharmacy answers it: replaced, or refund.
+export const problemReports = pgTable('problem_reports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  paymentId: uuid('payment_id')
+    .notNull()
+    .unique()
+    .references(() => payments.id),
+  reportedBy: text('reported_by').$type<'payer' | 'beneficiary'>().notNull(),
+  reason: text('reason').$type<ProblemReason>().notNull(),
+  details: text('details').notNull().default(''),
+  status: text('status').$type<'open' | 'replaced' | 'refund'>().notNull().default('open'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
 });

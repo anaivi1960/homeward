@@ -71,3 +71,26 @@ export const getOrder = (id: string) => paypal(`/v2/checkout/orders/${encodeURIC
 
 export const captureOrder = (id: string) =>
   paypal(`/v2/checkout/orders/${encodeURIComponent(id)}/capture`, { method: 'POST' });
+
+export const getCapture = (id: string) => paypal(`/v2/payments/captures/${encodeURIComponent(id)}`);
+
+// Asks PayPal whether a webhook delivery is genuine. Needs PAYPAL_WEBHOOK_ID, the id PayPal
+// gives the webhook when its URL is registered; without it every delivery is rejected.
+export async function verifyWebhook(headers: Headers, rawBody: string) {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) return false;
+  const fields = JSON.stringify({
+    auth_algo: headers.get('paypal-auth-algo'),
+    cert_url: headers.get('paypal-cert-url'),
+    transmission_id: headers.get('paypal-transmission-id'),
+    transmission_sig: headers.get('paypal-transmission-sig'),
+    transmission_time: headers.get('paypal-transmission-time'),
+    webhook_id: webhookId,
+  });
+  // The event goes in exactly as received: re-serialising it can change the bytes PayPal signed.
+  const res = await paypal('/v1/notifications/verify-webhook-signature', {
+    method: 'POST',
+    body: `${fields.slice(0, -1)},"webhook_event":${rawBody}}`,
+  });
+  return res.body.verification_status === 'SUCCESS';
+}

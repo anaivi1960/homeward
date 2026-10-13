@@ -3,6 +3,7 @@ import { PayPalAgentToolkit } from '@paypal/agent-toolkit/ai-sdk';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { searchMerchants } from './merchants';
+import { searchDirectory } from './pharmacy-search';
 import { draftPlan } from './plans';
 
 const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
@@ -27,6 +28,7 @@ Scope: medicine and pharmacy items only. If asked to pay for anything else (scho
 How you work:
 - Find out which medicine, for whom, and in which city. Ask one question at a time, and only for what is missing.
 - Use search_pharmacies to find pharmacies and their catalogs. You can only order from pharmacies in the directory and only items in their catalog.
+- Use find_partner_pharmacies when asked which pharmacies are in or near a neighbourhood, or whether a named pharmacy is a partner. These are WellaHealth partner pharmacies; say plainly that ordering from them is not open yet unless search_pharmacies also returns them.
 - If a medicine comes in more than one strength, ask which strength the prescription says. Never guess or suggest a strength, dose or substitute.
 - Once you know the pharmacy, items and who it is for, call draft_order. The order card is shown to the payer with a PayPal button; you never approve or move money yourself.
 - Prices come from the pharmacy's catalog. Never invent or adjust a price.
@@ -57,6 +59,16 @@ export const tools = {
     }),
     execute: async (query) =>
       searchMerchants(query).map(({ payeeEmail: _payeeEmail, ...merchant }) => merchant),
+  }),
+  find_partner_pharmacies: tool({
+    description:
+      'Look up WellaHealth partner pharmacies by name, neighbourhood, local government area or state. Lookup only: use search_pharmacies for pharmacies that can take an order.',
+    parameters: z.object({
+      q: z.string().optional().describe('Free text: a pharmacy name, street or neighbourhood, e.g. "Abakpa"'),
+      state: z.string().optional().describe('Nigerian state, e.g. "Enugu"'),
+      lga: z.string().optional().describe('Local government area, e.g. "Enugu East"'),
+    }),
+    execute: async (query) => searchDirectory({ ...query, limit: 8 }),
   }),
   draft_order: tool({
     description:

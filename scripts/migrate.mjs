@@ -29,5 +29,17 @@ await sql`
     collected_at timestamptz
   )`;
 
+await sql`
+  create table if not exists problem_reports (
+    id uuid primary key default gen_random_uuid(),
+    payment_id uuid not null unique references payments (id),
+    reported_by text not null,
+    reason text not null,
+    details text not null default '',
+    status text not null default 'open',
+    created_at timestamptz not null default now(),
+    resolved_at timestamptz
+  )`;
+
 const tables = await sql`select table_name from information_schema.tables where table_schema = 'public' order by 1`;
 console.log('tables:', tables.map((t) => t.table_name).join(', '));
