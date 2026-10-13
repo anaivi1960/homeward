@@ -8,6 +8,14 @@ import { draftPlan } from './plans';
 const workspaceId = process.env.ANTHROPIC_WORKSPACE_ID;
 const anthropic = createAnthropic({
   headers: workspaceId ? { 'anthropic-workspace-id': workspaceId } : undefined,
+  // AI SDK v4 always sends `temperature`, which this model rejects; drop it from the request.
+  fetch: async (url, init) => {
+    if (typeof init?.body === 'string') {
+      const { temperature: _temperature, ...body } = JSON.parse(init.body);
+      init = { ...init, body: JSON.stringify(body) };
+    }
+    return fetch(url, init);
+  },
 });
 
 export const model = anthropic('claude-sonnet-5-5');

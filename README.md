@@ -10,8 +10,7 @@ Built for the PayPal AI Hackathon 2026. It runs entirely in the PayPal sandbox; 
 
 Work in progress.
 
-- Working: PayPal order paid directly to a merchant's sandbox account, capture on return.
-- Written, not yet verified end to end: chat with the agent, merchant search, care plan drafting.
+- Working: chat with the agent, merchant search, care plan drafting, PayPal order paid directly to a merchant's sandbox account, capture on return.
 - Not built yet: database (plans are held in memory), merchant portal, beneficiary pickup page, receipt verification, recurring plans, webhooks.
 
 ## Stack
