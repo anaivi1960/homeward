@@ -8,7 +8,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ mer
   const paymentId = String(form.get('paymentId'));
   const refunded = await checkRefund(merchantId, paymentId);
 
-  const portal = new URL(`/merchant/${merchantId}`, request.url);
-  if (!refunded) portal.searchParams.set('norefund', paymentId);
-  return respond(request, portal, refunded);
+  return respond(request, `/merchant/${merchantId}${refunded ? '' : `?norefund=${encodeURIComponent(paymentId)}`}`, refunded);
 }

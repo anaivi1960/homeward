@@ -11,7 +11,8 @@ export type OrderEvent =
   | 'problem.answered';
 
 // Render sets RENDER_EXTERNAL_URL on every web service.
-export const appUrl = () => process.env.APP_URL ?? process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:3000';
+export const appUrl = () =>
+  (process.env.APP_URL ?? process.env.RENDER_EXTERNAL_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
 export async function notify(event: OrderEvent, data: Record<string, unknown>) {
   const url = process.env.NOTIFY_WEBHOOK_URL;

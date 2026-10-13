@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AppHeader } from '@/components/brand';
 import { ShareLink } from '@/components/share-link';
 import { settleOrder } from '@/lib/plans';
+import { originOf } from '@/lib/respond';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,8 +15,7 @@ export default async function OrderReturn({ searchParams }: { searchParams: Prom
   const settled = await settleOrder(token);
   if (!settled) return <Failed detail="Nothing was charged. Go back and try again." />;
   const { order, captured, plan, payment } = settled;
-  const requestHeaders = await headers();
-  const origin = `${requestHeaders.get('x-forwarded-proto') ?? 'http'}://${requestHeaders.get('host')}`;
+  const origin = originOf(await headers());
 
   return (
     <>
