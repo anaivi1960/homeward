@@ -1,20 +1,24 @@
 import Link from 'next/link';
 import { Brand } from '@/components/brand';
 import { HeroScene } from '@/components/landing/hero-scene';
+import { StepScene } from '@/components/landing/step-scene';
 
 const steps = [
   {
     n: '01',
+    model: '/models/step-1.glb',
     title: 'Say what she needs',
     body: 'Tell Homeward the medicine and the city. It finds a verified pharmacy nearby and shows you the price.',
   },
   {
     n: '02',
+    model: '/models/step-2.glb',
     title: 'Approve with PayPal',
     body: 'You pay the pharmacy directly. No cash changes hands at home, and nobody has to run the errand.',
   },
   {
     n: '03',
+    model: '/models/step-3.glb',
     title: 'See it picked up',
     body: 'She collects with a one-time code. The moment the pharmacy confirms it, you see it.',
   },
@@ -71,10 +75,13 @@ export default function Landing() {
           </h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             {steps.map((step) => (
-              <article key={step.n} className="card p-6">
-                <p className="label text-accent">{step.n}</p>
-                <h3 className="mt-8 text-xl font-semibold tracking-tight">{step.title}</h3>
+              <article key={step.n} className="card p-3">
+                <StepScene model={step.model} />
+                <div className="p-3 pt-5">
+                  <p className="label text-accent">{step.n}</p>
+                  <h3 className="mt-2 text-xl font-semibold tracking-tight">{step.title}</h3>
                 <p className="mt-2 text-text-muted">{step.body}</p>
+                </div>
               </article>
             ))}
           </div>
