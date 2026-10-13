@@ -6,8 +6,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { WellaPharmacy } from '@/lib/wella-enugu';
 import { gridTheme } from './grid-theme';
 
-// The partner directory as a grid: search, sort, filter and export it, and click a row to
-// find that pharmacy on the map. Selection is shared with the map through `selected`.
+// The partner directory as a grid: search, sort, filter and export it. The pharmacy picked here
+// or on the map is pinned as the first row and scrolled into view, so its details are always
+// at the top of the table.
 export function PharmacyGrid({
   pharmacies,
   selected,
@@ -18,17 +19,19 @@ export function PharmacyGrid({
   onSelect: (code: string | undefined) => void;
 }) {
   const api = useRef<GridApi<WellaPharmacy>>(null);
+  const top = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [shown, setShown] = useState(pharmacies.length);
 
-  // A pharmacy picked on the map selects its row and scrolls it into view.
+  const chosen = useMemo(() => pharmacies.filter((p) => p.code === selected), [pharmacies, selected]);
+  const rest = useMemo(() => pharmacies.filter((p) => p.code !== selected), [pharmacies, selected]);
+
+  // Bring the top of the table (search, header and the pinned row) on screen, moving the page
+  // as little as possible so the map stays in view when there is room for both.
   useEffect(() => {
-    const grid = api.current;
-    if (!grid) return;
-    const node = selected ? grid.getRowNode(selected) : undefined;
-    if (!node) return grid.deselectAll();
-    if (!node.isSelected()) node.setSelected(true, true);
-    grid.ensureNodeVisible(node, 'middle');
+    if (!selected) return;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    top.current?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'nearest' });
   }, [selected]);
 
   const columns = useMemo<ColDef<WellaPharmacy>[]>(
@@ -43,7 +46,9 @@ export function PharmacyGrid({
   );
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="relative flex flex-col gap-3">
+      {/* Marks the part of the table that should be on screen after a pharmacy is picked. */}
+      <div ref={top} aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[210px] scroll-mt-20" />
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={search}
@@ -54,7 +59,7 @@ export function PharmacyGrid({
           className="min-h-10 min-w-40 flex-1 rounded-full border border-border bg-surface px-4 text-sm outline-none focus:border-text"
         />
         <p className="label text-text-muted">
-          {shown} of {pharmacies.length}
+          {shown + chosen.length} of {pharmacies.length}
         </p>
         <button
           type="button"
@@ -67,22 +72,22 @@ export function PharmacyGrid({
 
       <AgGridReact<WellaPharmacy>
         theme={gridTheme}
-        rowData={pharmacies}
+        rowData={rest}
+        pinnedTopRowData={chosen}
         columnDefs={columns}
         defaultColDef={{ sortable: true, filter: true, resizable: true }}
         getRowId={({ data }) => data.code}
         domLayout="autoHeight"
         quickFilterText={search}
-        rowSelection={{ mode: 'singleRow', checkboxes: false, enableClickSelection: true }}
         tooltipShowDelay={300}
+        rowClass="cursor-pointer"
+        rowClassRules={{ 'grid-chosen': ({ node }) => node.rowPinned === 'top' }}
         onGridReady={(event) => {
           api.current = event.api;
         }}
         onModelUpdated={(event) => setShown(event.api.getDisplayedRowCount())}
-        onSelectionChanged={(event) => {
-          if (event.source === 'api') return;
-          onSelect(event.api.getSelectedRows()[0]?.code);
-        }}
+        // Clicking the pinned row again lets it go.
+        onRowClicked={({ data, node }) => onSelect(node.rowPinned ? undefined : data?.code)}
         overlayNoRowsTemplate="No pharmacy matches that search."
       />
     </div>
