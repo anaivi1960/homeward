@@ -1,8 +1,7 @@
-import { revalidatePath } from 'next/cache';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { formatTime, StatusChip } from '@/components/status-chip';
 import { getMerchant } from '@/lib/merchants';
-import { confirmPickup, listPayments } from '@/lib/plans';
+import { listPayments } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,14 +18,6 @@ export default async function MerchantPortal({
   const merchant = getMerchant(merchantId);
   if (!merchant) notFound();
   const rows = await listPayments(merchant.id);
-
-  async function confirm(formData: FormData) {
-    'use server';
-    const paymentId = String(formData.get('paymentId'));
-    const ok = await confirmPickup(merchantId, paymentId, String(formData.get('code') ?? ''));
-    revalidatePath(`/merchant/${merchantId}`);
-    redirect(ok ? `/merchant/${merchantId}` : `/merchant/${merchantId}?wrong=${paymentId}`);
-  }
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col gap-6 p-4 py-12">
@@ -66,7 +57,7 @@ export default async function MerchantPortal({
           <p className="amount mt-3 text-2xl font-semibold">${payment.amountUsd}</p>
 
           {payment.status === 'ready_for_pickup' ? (
-            <form action={confirm} className="mt-4 flex gap-2">
+            <form action={`/merchant/${merchant.id}/confirm`} method="post" className="mt-4 flex gap-2">
               <input type="hidden" name="paymentId" value={payment.id} />
               <input
                 name="code"

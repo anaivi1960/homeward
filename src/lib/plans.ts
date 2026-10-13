@@ -117,6 +117,7 @@ export async function listPayments(merchantId?: string) {
 
 // The merchant confirms handover by entering the beneficiary's pickup code.
 export async function confirmPickup(merchantId: string, paymentId: string, code: string) {
+  if (!UUID.test(paymentId)) return false;
   const updated = await db
     .update(payments)
     .set({ status: 'collected', collectedAt: new Date() })
