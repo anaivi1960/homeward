@@ -8,5 +8,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ mer
   const paymentId = String(form.get('paymentId'));
   const ok = await confirmPickup(merchantId, paymentId, String(form.get('code') ?? ''));
 
-  return respond(request, `/merchant/${merchantId}${ok ? '' : `?wrong=${encodeURIComponent(paymentId)}`}`, ok);
+  return respond(request, `/merchant/${merchantId}?${ok ? 'confirmed' : 'wrong'}=${encodeURIComponent(paymentId)}`, ok);
 }

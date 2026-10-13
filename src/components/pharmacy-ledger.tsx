@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LedgerRow } from '@/lib/ledger';
 import { gridTheme, usd } from './grid-theme';
 import { formatTime, StatusChip } from './status-chip';
+import { Toast } from './toast';
 
 type Tab = 'all' | 'action' | 'waiting' | 'done';
 // What the grid's cells need besides their row: how to act on an order, and any failed attempt.
@@ -69,7 +70,7 @@ function ActionCell({ data, node, context }: Cell) {
     );
   }
   if (data.status === 'ready_for_pickup') {
-    return <span className={`text-xs ${error ? 'text-danger' : 'text-text-muted'}`}>{error ?? 'Type the code in “Pickup code”'}</span>;
+    return <span className={`text-xs ${error ? 'text-danger' : 'text-text-muted'}`}>{error ?? 'Type the customer’s code in the green box'}</span>;
   }
   return <span className="text-xs text-text-muted">{data.problemStatus === 'replaced' ? 'Replaced' : '—'}</span>;
 }
@@ -82,6 +83,7 @@ export function PharmacyLedger({ merchantId, initialRows }: { merchantId: string
   const [search, setSearch] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string>();
+  const [verified, setVerified] = useState<{ at: number; beneficiary: string }>();
   const api = useRef<GridApi<LedgerRow>>(null);
 
   const refresh = useCallback(async () => {
@@ -105,6 +107,7 @@ export function PharmacyLedger({ merchantId, initialRows }: { merchantId: string
         body: new URLSearchParams(fields),
       }).catch(() => undefined);
       setBusy(undefined);
+      if (res?.ok && path === 'confirm') setVerified({ at: Date.now(), beneficiary: row.beneficiary });
       setErrors((current) => {
         const { [row.id]: _cleared, ...rest } = current;
         return res?.ok ? rest : { ...rest, [row.id]: failure };
@@ -141,7 +144,7 @@ export function PharmacyLedger({ merchantId, initialRows }: { merchantId: string
         width: 140,
       },
       {
-        headerName: 'Pickup code',
+        headerName: 'Enter pickup code',
         colId: 'code',
         // The code is never sent to this page; the cell only takes what the customer says.
         valueGetter: () => '',
@@ -154,7 +157,7 @@ export function PharmacyLedger({ merchantId, initialRows }: { merchantId: string
         cellClassRules: { 'ledger-code': ({ data }) => data?.status === 'ready_for_pickup' },
         sortable: false,
         filter: false,
-        width: 150,
+        width: 210,
       },
       { headerName: 'Next step', colId: 'action', cellRenderer: ActionCell, sortable: false, filter: false, minWidth: 260, flex: 1 },
       {
@@ -194,6 +197,13 @@ export function PharmacyLedger({ merchantId, initialRows }: { merchantId: string
 
   return (
     <div className="flex flex-col gap-3">
+      {verified && (
+        <Toast
+          key={verified.at}
+          title="Code verified"
+          detail={`Hand over the order for ${verified.beneficiary}. It is now marked as picked up.`}
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap rounded-full border border-border bg-surface p-1 text-xs font-medium">
           {tabs.map((t) => (

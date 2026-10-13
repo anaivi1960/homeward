@@ -19,7 +19,17 @@ const stages = [
 
 type Anchors = { us: RefObject<HTMLDivElement | null>; ng: RefObject<HTMLDivElement | null> };
 
-function Diorama({ still, anchors, onStage }: { still: boolean; anchors: Anchors; onStage: (stage: number) => void }) {
+function Diorama({
+  still,
+  anchors,
+  onStage,
+  onReady,
+}: {
+  still: boolean;
+  anchors: Anchors;
+  onStage: (stage: number) => void;
+  onReady?: () => void;
+}) {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(MODEL);
   const { mixer, actions, names } = useAnimations(animations, group);
@@ -41,6 +51,9 @@ function Diorama({ still, anchors, onStage }: { still: boolean; anchors: Anchors
     if (still) mixer.update(0);
     return () => all.forEach((action) => void action.stop());
   }, [actions, names, mixer, still]);
+
+  // This component only renders once the model has downloaded.
+  useEffect(() => onReady?.(), [onReady]);
 
   // Fit both islands at any width and height.
   useEffect(() => {
@@ -100,7 +113,7 @@ function Label({ anchor, place, text, done }: { anchor: RefObject<HTMLDivElement
   );
 }
 
-export default function Scene() {
+export default function Scene({ onReady }: { onReady?: () => void }) {
   const still = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     [],
@@ -124,7 +137,7 @@ export default function Scene() {
         <ambientLight intensity={1.15} />
         <directionalLight position={[4, 12, 9]} intensity={1.7} />
         <directionalLight position={[-6, 6, -4]} intensity={0.5} />
-        <Diorama still={still} anchors={anchors} onStage={setStage} />
+        <Diorama still={still} anchors={anchors} onStage={setStage} onReady={onReady} />
         <ContactShadows position={[0, -0.31, 0]} scale={26} blur={2.6} opacity={0.22} far={6} />
       </Canvas>
       <Label anchor={us} place="Houston · 9:14 AM" text={stages[stage].us} done={stage > 0} />
