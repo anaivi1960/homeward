@@ -6,7 +6,7 @@ import { getPlan } from '@/lib/plans';
 // Creates a PayPal order for a care plan and sends the payer to PayPal to approve it.
 export async function POST(request: Request) {
   const form = await request.formData();
-  const plan = getPlan(String(form.get('planId')));
+  const plan = await getPlan(String(form.get('planId')));
   const merchant = plan && getMerchant(plan.merchantId);
   if (!plan || !merchant) return NextResponse.json({ error: 'Unknown care plan' }, { status: 404 });
   if (plan.status === 'paid') return NextResponse.json({ error: 'This plan is already paid' }, { status: 409 });

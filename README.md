@@ -11,7 +11,8 @@ Built for the PayPal AI Hackathon 2026. It runs entirely in the PayPal sandbox; 
 Work in progress.
 
 - Working: chat with the agent, merchant search, care plan drafting, PayPal order paid directly to a merchant's sandbox account, capture on return.
-- Not built yet: database (plans are held in memory), merchant portal, beneficiary pickup page, receipt verification, recurring plans, webhooks.
+- Built, awaiting a full run with a real sandbox approval: Postgres storage (Neon), pickup codes, beneficiary page (`/b/<token>`), merchant portal (`/merchant/ndidi-pharmacy`), payer timeline (`/payments`).
+- Not built yet: receipt verification, recurring plans, webhooks, merchant login.
 
 ## Stack
 
@@ -29,7 +30,7 @@ Requires Node 20 or later.
    npm install
    ```
 
-2. Copy `.env.example` to `.env` and fill it in. You need a PayPal sandbox REST app, one personal sandbox account (the payer), four business sandbox accounts (Homeward plus three merchants), and a Claude API key.
+2. Copy `.env.example` to `.env` and fill it in, including a Postgres `DATABASE_URL`, then run `node --env-file=.env scripts/migrate.mjs` to create the tables. You need a PayPal sandbox REST app, one personal sandbox account (the payer), four business sandbox accounts (Homeward plus three merchants), and a Claude API key.
 
 3. Start the app:
 
