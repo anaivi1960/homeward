@@ -5,9 +5,9 @@ import type { CarePlan } from '@/lib/plans';
 import { PlanCard } from './plan-card';
 
 const starters = [
-  "Pay for Mum's blood-pressure medicine in Enugu",
-  "Cover my brother's school fees this term",
-  'Send a monthly provisions basket to my aunt in Lagos',
+  "Order Mum's blood-pressure medicine in Enugu",
+  'My dad in Lagos needs malaria tablets',
+  'Metformin for my aunt in Abuja',
 ];
 
 export function Chat() {
@@ -15,27 +15,29 @@ export function Chat() {
   const busy = status === 'submitted' || status === 'streaming';
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <div className="mx-auto w-full max-w-[640px] flex-1 space-y-4 p-4 pt-8 pb-32">
-        <p className="font-display text-xl font-semibold text-primary">Homeward</p>
-
+    <div className="flex min-h-[calc(100dvh-56px)] flex-col">
+      <div className="mx-auto w-full max-w-[720px] flex-1 space-y-4 p-4 pb-32">
         {messages.length === 0 && (
-          <div className="pt-8">
-            <h1 className="font-display text-[32px] leading-[38px] font-semibold">
-              What does family at home need?
+          <div className="pt-12 sm:pt-20">
+            <p className="label text-text-muted">New order</p>
+            <h1 className="mt-3 text-[36px] leading-[1.05] font-semibold sm:text-[52px]">
+              What medicine does she need?
             </h1>
-            <p className="mt-2 text-text-muted">
-              Tell me what to cover. I&rsquo;ll find a trusted merchant, and you approve the payment.
+            <p className="mt-3 max-w-[46ch] text-text-muted">
+              Tell me the medicine and the city. I&rsquo;ll find a verified pharmacy, and you approve the payment.
             </p>
-            <div className="mt-6 flex flex-col gap-2">
+            <div className="mt-8 flex flex-col gap-2">
               {starters.map((text) => (
                 <button
                   key={text}
                   type="button"
                   onClick={() => append({ role: 'user', content: text })}
-                  className="min-h-11 rounded-control border border-border bg-surface px-4 text-left text-sm"
+                  className="group flex min-h-12 items-center justify-between rounded-control border border-border bg-surface px-4 text-left text-sm transition-colors hover:border-text"
                 >
                   {text}
+                  <span aria-hidden className="text-text-muted transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
                 </button>
               ))}
             </div>
@@ -49,10 +51,10 @@ export function Chat() {
                 return (
                   <p
                     key={i}
-                    className={`max-w-[85%] whitespace-pre-wrap rounded-card px-4 py-3 ${
+                    className={`w-fit max-w-[85%] whitespace-pre-wrap px-4 py-2.5 ${
                       message.role === 'user'
-                        ? 'ml-auto w-fit bg-surface-muted'
-                        : 'w-fit border border-border bg-surface'
+                        ? 'ml-auto rounded-[20px] rounded-br-md bg-primary text-on-primary'
+                        : 'rounded-[20px] rounded-bl-md bg-surface-muted'
                     }`}
                   >
                     {part.text}
@@ -63,12 +65,13 @@ export function Chat() {
                 const call = part.toolInvocation;
                 if (call.state !== 'result') {
                   return (
-                    <p key={i} className="text-sm text-text-muted">
-                      {call.toolName === 'search_merchants' ? 'Looking for merchants…' : 'Working on it…'}
+                    <p key={i} className="label flex items-center gap-2 text-text-muted">
+                      <span className="block size-1.5 rotate-45 animate-pulse bg-signal" />
+                      {call.toolName === 'search_pharmacies' ? 'Finding pharmacies' : 'Working'}
                     </p>
                   );
                 }
-                if (call.toolName === 'draft_care_plan' && !('error' in call.result)) {
+                if (call.toolName === 'draft_order' && !('error' in call.result)) {
                   return <PlanCard key={i} plan={call.result as CarePlan} />;
                 }
               }
@@ -77,9 +80,14 @@ export function Chat() {
           </div>
         ))}
 
-        {status === 'submitted' && <p className="text-sm text-text-muted">Thinking…</p>}
+        {status === 'submitted' && (
+          <p className="label flex items-center gap-2 text-text-muted">
+            <span className="block size-1.5 rotate-45 animate-pulse bg-signal" />
+            Thinking
+          </p>
+        )}
         {error && (
-          <p className="rounded-card border border-danger px-4 py-3 text-sm text-danger">
+          <p className="rounded-control border border-danger px-4 py-3 text-sm text-danger">
             I couldn&rsquo;t reply just now. Nothing was charged. {error.message}
           </p>
         )}
@@ -90,21 +98,17 @@ export function Chat() {
           handleSubmit(event);
           setInput('');
         }}
-        className="fixed inset-x-0 bottom-0 border-t border-border bg-bg p-4"
+        className="fixed inset-x-0 bottom-0 bg-linear-to-t from-bg from-70% to-transparent p-4 pt-8"
       >
-        <div className="mx-auto flex max-w-[640px] gap-2">
+        <div className="mx-auto flex max-w-[720px] items-center gap-2 rounded-full border border-border bg-surface p-1.5 pl-5 shadow-[0_8px_30px_rgb(10_11_13/0.08)] focus-within:border-text">
           <input
             value={input}
             onChange={handleInputChange}
-            placeholder="What should I cover, and for whom?"
+            placeholder="Which medicine, and for whom?"
             aria-label="Message"
-            className="min-h-11 flex-1 rounded-control border border-border bg-surface px-4 outline-primary"
+            className="min-h-11 flex-1 bg-transparent outline-none placeholder:text-text-muted"
           />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            className="min-h-11 rounded-control bg-primary px-5 font-semibold text-on-primary disabled:opacity-50"
-          >
+          <button type="submit" disabled={busy || !input.trim()} className="btn px-5">
             Send
           </button>
         </div>

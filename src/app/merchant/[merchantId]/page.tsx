@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation';
+import { AutoRefresh } from '@/components/auto-refresh';
+import { Brand } from '@/components/brand';
 import { formatTime, StatusChip } from '@/components/status-chip';
 import { getMerchant } from '@/lib/merchants';
 import { listPayments } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
-// Demo portal: no merchant login yet, the merchant is chosen by URL.
+// Demo portal: no pharmacy login yet, the pharmacy is chosen by URL.
 export default async function MerchantPortal({
   params,
   searchParams,
@@ -18,67 +20,68 @@ export default async function MerchantPortal({
   const merchant = getMerchant(merchantId);
   if (!merchant) notFound();
   const rows = await listPayments(merchant.id);
+  const waiting = rows.filter((r) => r.payment.status === 'ready_for_pickup').length;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col gap-6 p-4 py-12">
-      <header>
-        <p className="font-display text-xl font-semibold text-primary">Homeward for merchants</p>
-        <h1 className="mt-6 font-display text-[32px] leading-[38px] font-semibold">{merchant.name}</h1>
-        <p className="text-text-muted">{merchant.city} · Paid orders</p>
-      </header>
+    <main className="mx-auto flex min-h-dvh max-w-[720px] flex-col gap-4 p-4 py-8">
+      {/* Refreshing would clear a half-typed code, so only poll when nothing is waiting on input. */}
+      {waiting === 0 && <AutoRefresh />}
+      <Brand suffix="Pharmacy" />
+      <p className="label mt-8 text-text-muted">
+        {merchant.city} · {waiting} waiting for pickup
+      </p>
+      <h1 className="text-[36px] leading-[1.05] font-semibold sm:text-[52px]">{merchant.name}</h1>
 
       {rows.length === 0 && (
-        <p className="rounded-card border border-border bg-surface p-6 text-text-muted">
+        <p className="card mt-4 p-8 text-center text-text-muted">
           No paid orders yet. They appear here as soon as a family pays.
         </p>
       )}
 
       {rows.map(({ payment, plan }) => (
-        <section key={payment.id} className="rounded-card border border-border bg-surface p-5">
+        <section key={payment.id} className="card mt-2 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="font-semibold">
-                For <span className="text-accent">{plan.beneficiary}</span>
-              </p>
-              <p className="text-sm text-text-muted">Paid {formatTime(payment.paidAt)}</p>
+              <p className="font-semibold tracking-tight">For {plan.beneficiary}</p>
+              <p className="label mt-1 text-text-muted">Paid {formatTime(payment.paidAt)}</p>
             </div>
             <StatusChip status={payment.status} />
           </div>
-          <ul className="mt-3 border-t border-border pt-3 text-sm">
+          <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
             {plan.items.map((item) => (
-              <li key={item.name} className="flex justify-between gap-4">
+              <li key={item.name} className="flex justify-between gap-4 py-2.5">
                 <span>
                   {item.name} <span className="text-text-muted">× {item.quantity}</span>
                 </span>
-                <span className="tabular-nums">${item.lineUsd}</span>
+                <span className="font-mono tabular-nums">${item.lineUsd}</span>
               </li>
             ))}
           </ul>
-          <p className="amount mt-3 text-2xl font-semibold">${payment.amountUsd}</p>
+          <p className="amount mt-4 text-2xl font-semibold">${payment.amountUsd}</p>
 
           {payment.status === 'ready_for_pickup' ? (
-            <form action={`/merchant/${merchant.id}/confirm`} method="post" className="mt-4 flex gap-2">
+            <form action={`/merchant/${merchant.id}/confirm`} method="post" className="mt-4 flex flex-wrap gap-2">
               <input type="hidden" name="paymentId" value={payment.id} />
               <input
                 name="code"
                 required
                 maxLength={6}
                 autoComplete="off"
-                placeholder="Pickup code"
+                placeholder="CODE"
                 aria-label="Pickup code"
-                className="min-h-11 w-40 rounded-control border border-border bg-bg px-3 font-mono tracking-widest uppercase outline-primary"
+                className="min-h-11 w-40 rounded-full border border-border bg-surface px-5 font-mono tracking-[0.25em] uppercase outline-none focus:border-text"
               />
-              <button type="submit" className="min-h-11 rounded-control bg-primary px-4 font-semibold text-on-primary">
-                Confirm handover
+              <button type="submit" className="btn">
+                Confirm pickup
               </button>
             </form>
           ) : (
-            <p className="mt-3 text-sm text-text-muted">
-              Handed over {payment.collectedAt && formatTime(payment.collectedAt)}.
+            <p className="label mt-3 text-text-muted">
+              Picked up {payment.collectedAt && formatTime(payment.collectedAt)}
             </p>
           )}
           {wrong === payment.id && (
-            <p className="mt-2 text-sm text-danger">That code doesn&rsquo;t match this order. Check it and try again.</p>
+            <p className="mt-3 text-sm text-danger">That code doesn&rsquo;t match this order. Check it and try again.</p>
           )}
         </section>
       ))}

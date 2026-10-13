@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     description: plan.items.map((i) => i.name).join(', ').slice(0, 127),
     referenceId: plan.id,
     returnUrl: `${origin}/orders/return`,
-    cancelUrl: `${origin}/?cancelled=1`,
+    cancelUrl: `${origin}/app`,
   });
 
   const approve = order.body.links?.find((l: { rel: string }) => l.rel === 'payer-action' || l.rel === 'approve');

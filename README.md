@@ -2,7 +2,7 @@
 
 Pay for what family at home needs, and see proof it arrived.
 
-Homeward lets someone abroad cover a relative's needs in Nigeria by telling an AI agent what to pay for, instead of sending cash. The agent finds a vetted local merchant, drafts a care plan, and the payer approves the payment with PayPal. The money goes to the merchant, not to an individual.
+Homeward lets someone abroad order medicine for family in Nigeria by telling an AI agent what is needed. The agent finds a verified pharmacy, the payer approves the payment with PayPal, and the money goes to the pharmacy, not to an individual. The family member collects with a pickup code, and the payer sees the moment it is picked up.
 
 Built for the PayPal AI Hackathon 2026. It runs entirely in the PayPal sandbox; no real money moves.
 
@@ -10,13 +10,14 @@ Built for the PayPal AI Hackathon 2026. It runs entirely in the PayPal sandbox; 
 
 Work in progress.
 
-- Working: chat with the agent, merchant search, care plan drafting, PayPal order paid directly to a merchant's sandbox account, capture on return.
-- Built, awaiting a full run with a real sandbox approval: Postgres storage (Neon), pickup codes, beneficiary page (`/b/<token>`), merchant portal (`/merchant/ndidi-pharmacy`), payer timeline (`/payments`).
-- Not built yet: receipt verification, recurring plans, webhooks, merchant login.
+- Working: landing page with a 3D scene, chat with the agent, pharmacy search, order drafting, PayPal order paid directly to a pharmacy's sandbox account, Postgres storage, pickup codes, family pickup page (`/b/<token>`), pharmacy portal (`/merchant/ndidi-pharmacy`), orders and pickups (`/payments`).
+- Awaiting one full run with a real sandbox approval: capture on return from PayPal through to the pickup code.
+- Not built yet: receipt verification, recurring orders, webhooks, pharmacy login, delivery tracking.
 
 ## Stack
 
 - Next.js (App Router), TypeScript, Tailwind CSS
+- 3D landing scene modelled and animated in Blender (`assets/homeward-scene.blend`), shown with three.js
 - Claude through the Vercel AI SDK
 - PayPal Orders API and the [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit)
 
@@ -30,7 +31,7 @@ Requires Node 20 or later.
    npm install
    ```
 
-2. Copy `.env.example` to `.env` and fill it in, including a Postgres `DATABASE_URL`, then run `node --env-file=.env scripts/migrate.mjs` to create the tables. You need a PayPal sandbox REST app, one personal sandbox account (the payer), four business sandbox accounts (Homeward plus three merchants), and a Claude API key.
+2. Copy `.env.example` to `.env` and fill it in, including a Postgres `DATABASE_URL`, then run `node --env-file=.env scripts/migrate.mjs` to create the tables. You need a PayPal sandbox REST app, one personal sandbox account (the payer), four business sandbox accounts (Homeward plus three pharmacies), and a Claude API key.
 
 3. Start the app:
 
@@ -38,7 +39,7 @@ Requires Node 20 or later.
    npm run dev
    ```
 
-4. Open http://localhost:3000, ask for something (for example "Pay for Mum's blood-pressure medicine in Enugu"), and approve the plan with the personal sandbox account.
+4. Open http://localhost:3000, open the app, ask for something (for example "Order Mum's blood-pressure medicine in Enugu"), and approve the plan with the personal sandbox account.
 
 `node --env-file=.env scripts/gate-order.mjs` checks that your sandbox app can create an order naming a merchant as payee.
 

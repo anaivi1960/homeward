@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { AppHeader } from '@/components/brand';
 import { captureOrder, getOrder } from '@/lib/paypal';
 import { getPlan, recordPayment } from '@/lib/plans';
 
@@ -20,56 +21,64 @@ export default async function OrderReturn({ searchParams }: { searchParams: Prom
   const payment = plan && (await recordPayment(plan, order.id, captured?.amount?.value ?? plan.amountUsd));
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col justify-center gap-6 p-4">
-      <section className="rounded-card border border-border bg-surface p-6">
-        <p className="text-sm font-medium text-success">✓ Paid</p>
-        <h1 className="mt-2 font-display text-2xl font-semibold">
-          Paid. {plan?.merchantName ?? 'The merchant'} has the order.
-        </h1>
-        <p className="mt-2 text-text-muted">
-          ${captured?.amount?.value} {captured?.amount?.currency_code} for {plan?.beneficiary ?? 'your family'}
+    <>
+      <AppHeader />
+      <main className="mx-auto flex max-w-[720px] flex-col gap-4 p-4 pt-12 sm:pt-20">
+        <p className="label flex items-center gap-2 text-accent">
+          <span className="block size-1.5 rotate-45 bg-signal" />
+          Paid
         </p>
-        <p className="mt-4 font-mono text-sm text-text-muted">PayPal order {order.id}</p>
-      </section>
+        <h1 className="text-[36px] leading-[1.05] font-semibold sm:text-[52px]">
+          {plan?.merchantName ?? 'The pharmacy'} has the order.
+        </h1>
+        <p className="text-text-muted">
+          <span className="font-mono text-text">
+            ${captured?.amount?.value} {captured?.amount?.currency_code}
+          </span>{' '}
+          for {plan?.beneficiary ?? 'your family'} · PayPal order <span className="font-mono">{order.id}</span>
+        </p>
 
-      {payment && plan && (
-        <section className="rounded-card border border-border bg-surface p-6">
-          <h2 className="font-semibold">Send this link to {plan.beneficiary}</h2>
-          <p className="mt-1 text-sm text-text-muted">
-            It shows the pickup code to give {plan.merchantName} when collecting.
-          </p>
-          <Link
-            href={`/b/${payment.beneficiaryToken}`}
-            className="mt-3 block break-all font-mono text-sm text-primary underline underline-offset-4"
-          >
-            /b/{payment.beneficiaryToken}
+        {payment && plan && (
+          <section className="card mt-4 p-6">
+            <p className="label text-text-muted">Next step</p>
+            <h2 className="mt-2 text-xl font-semibold">Send this link to {plan.beneficiary}</h2>
+            <p className="mt-1 text-sm text-text-muted">
+              It shows the pickup code to give {plan.merchantName}. You&rsquo;ll see it here the moment it&rsquo;s picked up.
+            </p>
+            <Link
+              href={`/b/${payment.beneficiaryToken}`}
+              className="mt-4 block rounded-control bg-surface-muted px-4 py-3 font-mono text-sm break-all hover:text-accent"
+            >
+              /b/{payment.beneficiaryToken}
+            </Link>
+          </section>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link href="/payments" className="btn">
+            Track pickup
           </Link>
-        </section>
-      )}
-
-      <div className="flex gap-6">
-        <Link href="/payments" className="text-primary underline underline-offset-4">
-          See all payments
-        </Link>
-        <Link href="/" className="text-primary underline underline-offset-4">
-          Back to Homeward
-        </Link>
-      </div>
-    </main>
+          <Link href="/app" className="btn btn-ghost">
+            New order
+          </Link>
+        </div>
+      </main>
+    </>
   );
 }
 
 function Failed({ detail }: { detail: string }) {
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col justify-center gap-6 p-4">
-      <section className="rounded-card border border-border bg-surface p-6">
-        <p className="text-sm font-medium text-danger">✕ Failed</p>
-        <h1 className="mt-2 font-display text-2xl font-semibold">The payment didn&rsquo;t go through</h1>
-        <p className="mt-2 text-text-muted">{detail}</p>
-      </section>
-      <Link href="/" className="text-primary underline underline-offset-4">
-        Back to Homeward
-      </Link>
-    </main>
+    <>
+      <AppHeader />
+      <main className="mx-auto flex max-w-[720px] flex-col gap-4 p-4 pt-12 sm:pt-20">
+        <p className="label text-danger">Not paid</p>
+        <h1 className="text-[36px] leading-[1.05] font-semibold sm:text-[52px]">The payment didn&rsquo;t go through.</h1>
+        <p className="text-text-muted">{detail}</p>
+        <Link href="/app" className="btn mt-4 w-fit">
+          Back to your order
+        </Link>
+      </main>
+    </>
   );
 }

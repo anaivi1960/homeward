@@ -1,51 +1,57 @@
 import { notFound } from 'next/navigation';
+import { AutoRefresh } from '@/components/auto-refresh';
+import { Brand } from '@/components/brand';
 import { formatTime, StatusChip } from '@/components/status-chip';
 import { getPaymentByToken } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
 
-// The beneficiary opens this from a link; no login.
+// The family member opens this from a link; no login.
 export default async function BeneficiaryPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const found = await getPaymentByToken(token);
   if (!found) notFound();
   const { payment, plan } = found;
+  const pickedUp = payment.status === 'collected';
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col gap-6 p-4 py-12">
-      <p className="font-display text-xl font-semibold text-primary">Homeward</p>
-      <h1 className="font-display text-[32px] leading-[38px] font-semibold">
-        {payment.status === 'collected' ? 'Collected. Thank you.' : `Your order at ${plan.merchantName} is paid for.`}
+    <main className="mx-auto flex min-h-dvh max-w-[520px] flex-col gap-4 p-4 py-8">
+      <AutoRefresh />
+      <Brand />
+      <h1 className="mt-8 text-[36px] leading-[1.05] font-semibold">
+        {pickedUp ? 'Picked up. Thank you.' : 'Your medicine is paid for.'}
       </h1>
 
-      <section className="rounded-card border border-border bg-surface p-6">
+      <section className="card mt-2 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="font-semibold">{plan.merchantName}</p>
-            <p className="text-sm text-text-muted">{plan.merchantCity}</p>
+            <p className="font-semibold tracking-tight">{plan.merchantName}</p>
+            <p className="label mt-1 text-text-muted">{plan.merchantCity}</p>
           </div>
           <StatusChip status={payment.status} />
         </div>
-        <ul className="mt-4 border-t border-border pt-3 text-sm">
+        <ul className="mt-5 divide-y divide-border border-y border-border text-sm">
           {plan.items.map((item) => (
-            <li key={item.name}>
+            <li key={item.name} className="py-2.5">
               {item.name} <span className="text-text-muted">× {item.quantity}</span>
             </li>
           ))}
         </ul>
 
-        {payment.status === 'ready_for_pickup' ? (
+        {pickedUp ? (
+          <p className="mt-5 text-sm text-text-muted">
+            Picked up {payment.collectedAt && formatTime(payment.collectedAt)}.
+          </p>
+        ) : (
           <>
-            <p className="mt-6 text-sm text-text-muted">Show this code when you collect</p>
-            <p className="mt-1 font-mono text-[44px] leading-[48px] font-medium tracking-[0.2em] text-accent">
+            <p className="label mt-6 text-text-muted">Show this code at the pharmacy</p>
+            <p className="mt-2 rounded-control bg-surface-muted py-5 text-center font-mono text-[40px] leading-none font-medium tracking-[0.25em]">
               {payment.pickupCode}
             </p>
-            <p className="mt-3 text-sm text-text-muted">Nothing to pay. Do not share the code with anyone else.</p>
+            <p className="mt-4 text-sm text-text-muted">
+              Nothing to pay. Bring the prescription if the medicine needs one, and don&rsquo;t share this code.
+            </p>
           </>
-        ) : (
-          <p className="mt-6 text-sm text-text-muted">
-            Collected {payment.collectedAt && formatTime(payment.collectedAt)}.
-          </p>
         )}
       </section>
     </main>

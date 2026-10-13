@@ -1,38 +1,22 @@
 @import 'tailwindcss';
 
-/* Design tokens from the Homeward design system. */
+/* Homeward design system: white, precise, one signal colour. Light only. */
 :root {
-  --bg: #fbf7f0;
+  color-scheme: light;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #f2ece1;
-  --border: #e3dacb;
-  --text: #1b1f1a;
-  --text-muted: #5c6258;
-  --primary: #0f5b46;
+  --surface-muted: #f4f5f7;
+  --border: #e4e7ec;
+  --text: #0a0b0d;
+  --text-muted: #667085;
+  --primary: #0a0b0d;
   --on-primary: #ffffff;
-  --accent: #b5472f;
-  --success: #1e7a4c;
-  --warning: #8a5a00;
-  --danger: #b3261e;
-  --info: #2f5d8a;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #12140f;
-    --surface: #1c1f19;
-    --surface-muted: #252920;
-    --border: #343a2e;
-    --text: #f3efe6;
-    --text-muted: #a9ae9f;
-    --primary: #5fcb9e;
-    --on-primary: #0b2019;
-    --accent: #f08a6c;
-    --success: #6fd39a;
-    --warning: #e8b452;
-    --danger: #f2867e;
-    --info: #8db8e3;
-  }
+  --signal: #00c46a;
+  --accent: #008a4b;
+  --success: #008a4b;
+  --warning: #9a6200;
+  --danger: #c62828;
+  --info: #2457d6;
 }
 
 @theme inline {
@@ -44,17 +28,18 @@
   --color-text-muted: var(--text-muted);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
+  --color-signal: var(--signal);
   --color-accent: var(--accent);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-info: var(--info);
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-  --radius-control: 8px;
-  --radius-card: 12px;
-  --radius-sheet: 20px;
+  --font-display: var(--font-geist), system-ui, sans-serif;
+  --font-sans: var(--font-geist), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-sheet: 28px;
 }
 
 body {
@@ -63,7 +48,67 @@ body {
   font-family: var(--font-sans);
 }
 
+h1,
+h2,
+.font-display {
+  letter-spacing: -0.03em;
+}
+
 .amount {
-  font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+/* Small uppercase mono label used for eyebrows, statuses and metadata. */
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Faint dot grid behind hero areas. */
+.dot-grid {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(10 11 13 / 0.04);
+}
+
+.btn {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  padding: 0 20px;
+  font-weight: 500;
+  color: var(--on-primary);
+  transition: transform 150ms ease-out, opacity 150ms ease-out;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:disabled {
+  opacity: 0.4;
+  transform: none;
+}
+.btn-ghost {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
 }
