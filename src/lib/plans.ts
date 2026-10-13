@@ -85,9 +85,9 @@ export async function getPlan(id: string | undefined) {
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newPickupCode = () => Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
 
-// Tells the Zapier hook about an order event, with enough detail to write a message from.
+// Tells the notification webhook about an order event, with enough detail to write a message from.
 async function announce(event: OrderEvent, paymentId: string, extra: Record<string, unknown> = {}) {
-  if (!process.env.ZAPIER_HOOK_URL) return;
+  if (!process.env.NOTIFY_WEBHOOK_URL) return;
   const [row] = await paymentWithPlan().where(eq(payments.id, paymentId));
   if (!row) return;
   const plan = withMerchant(row.plan);

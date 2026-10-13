@@ -23,7 +23,7 @@ Work in progress.
 - PayPal Orders and Payments APIs, PayPal webhooks, and the [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit)
 - [AG Grid](https://www.ag-grid.com/) for the pharmacy order ledger and the partner directory
 - [Render](https://render.com/) for hosting (`render.yaml`)
-- Optional: [Zapier](https://zapier.com/) for notifications, [Elasticsearch](https://www.elastic.co/) for partner-pharmacy search
+- Optional: an outgoing webhook for notifications (works with open-source tools such as [n8n](https://n8n.io/)), [Elasticsearch](https://www.elastic.co/) for partner-pharmacy search
 - A [Postman](https://www.postman.com/) collection of every API call (`postman/`)
 
 ## Run it locally
@@ -57,7 +57,7 @@ Requires Node 20 or later.
 
 ## Optional integrations
 
-**Zapier.** Create a Zap with the trigger **Webhooks by Zapier > Catch Hook** and put its URL in `ZAPIER_HOOK_URL`. Homeward posts a JSON event to it when an order is paid (`order.paid`), picked up (`order.picked_up`), cancelled (`order.cancel_requested`) or refunded (`order.refunded`), and when a problem is reported (`problem.reported`) or answered (`problem.answered`). Each event carries the pharmacy, the items, the amount, and `pickupUrl`, the link to text to the family member.
+**Notifications.** Set `NOTIFY_WEBHOOK_URL` to any URL that accepts a JSON POST, for example a Webhook trigger in a self-hosted [n8n](https://n8n.io/) or [Activepieces](https://www.activepieces.com/) workflow. Homeward posts a JSON event to it when an order is paid (`order.paid`), picked up (`order.picked_up`), cancelled (`order.cancel_requested`) or refunded (`order.refunded`), and when a problem is reported (`problem.reported`) or answered (`problem.answered`). Each event carries the pharmacy, the items, the amount, and `pickupUrl`, the link to text to the family member.
 
 **Elasticsearch.** Set `ELASTICSEARCH_URL` and `ELASTICSEARCH_API_KEY`, then load the WellaHealth partner directory:
 
