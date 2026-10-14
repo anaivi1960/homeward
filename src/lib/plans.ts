@@ -1,7 +1,15 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '@/db';
-import { carePlans, payments, type PlanItem, type ProblemReason, problemReasons, problemReports } from '@/db/schema';
+import {
+  carePlans,
+  handoverPhotos,
+  payments,
+  type PlanItem,
+  type ProblemReason,
+  problemReasons,
+  problemReports,
+} from '@/db/schema';
 import { getMerchant } from './merchants';
 import { appUrl, notify, type OrderEvent } from './notify';
 import { captureOrder, getCapture, getOrder } from './paypal';
@@ -21,6 +29,8 @@ export type CarePlan = {
   amountUsd: string;
   nairaEstimate: string;
   status: 'awaiting_approval' | 'paid';
+  // Set on the order card when the payer has a monthly allowance for this person.
+  allowance?: { beneficiary: string; monthlyUsd: number; spentUsd: number; remainingUsd: number };
 };
 
 function withMerchant(row: typeof carePlans.$inferSelect): CarePlan {
@@ -73,7 +83,7 @@ export async function draftPlan(input: DraftInput): Promise<CarePlan | { error: 
   return withMerchant(row);
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function getPlan(id: string | undefined) {
   if (!id || !UUID.test(id)) return undefined;
@@ -223,20 +233,27 @@ export async function resolveProblem(merchantId: string, reportId: string, answe
 
 const paymentWithPlan = () =>
   db
-    .select({ payment: payments, plan: carePlans, report: problemReports })
+    .select({ payment: payments, plan: carePlans, report: problemReports, photoAt: handoverPhotos.createdAt })
     .from(payments)
     .innerJoin(carePlans, eq(payments.planId, carePlans.id))
-    .leftJoin(problemReports, eq(problemReports.paymentId, payments.id));
+    .leftJoin(problemReports, eq(problemReports.paymentId, payments.id))
+    .leftJoin(handoverPhotos, eq(handoverPhotos.paymentId, payments.id));
 
 export async function getPaymentByToken(token: string) {
   const [row] = await paymentWithPlan().where(eq(payments.beneficiaryToken, token));
-  return row && { payment: row.payment, plan: withMerchant(row.plan), report: row.report };
+  return row && { payment: row.payment, plan: withMerchant(row.plan), report: row.report, photoAt: row.photoAt };
+}
+
+export async function getPaymentById(id: string) {
+  if (!UUID.test(id)) return undefined;
+  const [row] = await paymentWithPlan().where(eq(payments.id, id));
+  return row && { payment: row.payment, plan: withMerchant(row.plan), report: row.report, photoAt: row.photoAt };
 }
 
 export async function listPayments(merchantId?: string) {
   const query = paymentWithPlan();
   const rows = await (merchantId ? query.where(eq(payments.merchantId, merchantId)) : query).orderBy(desc(payments.paidAt));
-  return rows.map((row) => ({ payment: row.payment, plan: withMerchant(row.plan), report: row.report }));
+  return rows.map((row) => ({ payment: row.payment, plan: withMerchant(row.plan), report: row.report, photoAt: row.photoAt }));
 }
 
 // The merchant confirms handover by entering the beneficiary's pickup code.

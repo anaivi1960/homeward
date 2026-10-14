@@ -41,5 +41,34 @@ await sql`
     resolved_at timestamptz
   )`;
 
+await sql`
+  create table if not exists refills (
+    id uuid primary key default gen_random_uuid(),
+    source_plan_id uuid not null unique references care_plans (id),
+    beneficiary text not null,
+    merchant_id text not null,
+    items jsonb not null,
+    every_days integer not null default 30,
+    next_due timestamptz not null,
+    active boolean not null default true,
+    draft_plan_id uuid references care_plans (id),
+    created_at timestamptz not null default now()
+  )`;
+
+await sql`
+  create table if not exists allowances (
+    key text primary key,
+    beneficiary text not null,
+    monthly_usd numeric(10, 2) not null,
+    updated_at timestamptz not null default now()
+  )`;
+
+await sql`
+  create table if not exists handover_photos (
+    payment_id uuid primary key references payments (id),
+    image text not null,
+    created_at timestamptz not null default now()
+  )`;
+
 const tables = await sql`select table_name from information_schema.tables where table_schema = 'public' order by 1`;
 console.log('tables:', tables.map((t) => t.table_name).join(', '));

@@ -53,6 +53,11 @@ export default async function OrderReturn({ searchParams }: { searchParams: Prom
           <Link href="/payments" className="btn btn-ghost">
             Track pickup
           </Link>
+          {payment && (
+            <Link href={`/receipt/${payment.id}`} className="btn btn-ghost">
+              Receipt
+            </Link>
+          )}
           <Link href="/app" className="btn btn-ghost">
             New order
           </Link>

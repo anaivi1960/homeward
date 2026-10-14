@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AutoRefresh } from '@/components/auto-refresh';
 import { Brand } from '@/components/brand';
+import { HandoverPhoto } from '@/components/handover-photo';
 import { PageIntro } from '@/components/page-intro';
 import { answerBy } from '@/components/problem-report';
 import { formatTime, StatusChip } from '@/components/status-chip';
@@ -41,7 +42,7 @@ export default async function MerchantPortal({
         <Toast
           key={verified.payment.id}
           title="Code verified"
-          detail={`Hand over the order for ${verified.plan.beneficiary}. It is now marked as picked up.`}
+          detail={`Hand over the order for ${verified.plan.beneficiary}. It is now marked as picked up. You can add a handover photo under Earlier orders.`}
           clearParam="confirmed"
         />
       )}
@@ -163,6 +164,9 @@ export default async function MerchantPortal({
             {row.payment.status === 'refunded' && ' · Refunded to the payer'}
             {row.report?.status === 'replaced' && ' · Problem reported, replaced'}
           </p>
+          {row.payment.status === 'collected' && (
+            <HandoverPhoto merchantId={merchant.id} paymentId={row.payment.id} hasPhoto={Boolean(row.photoAt)} />
+          )}
         </section>
       ))}
     </main>

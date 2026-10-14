@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation';
 import { AutoRefresh } from '@/components/auto-refresh';
+import { OrderScene } from '@/components/order-scene';
 import { Brand } from '@/components/brand';
 import { ReportForm, ReportStatus } from '@/components/problem-report';
 import { formatTime, StatusChip } from '@/components/status-chip';
+import { orderStage } from '@/lib/order-stage';
 import { getPaymentByToken } from '@/lib/plans';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +15,7 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
   const found = await getPaymentByToken(token);
   if (!found) notFound();
   const { payment, plan, report } = found;
+  const scene = orderStage(payment, plan);
   const pickedUp = Boolean(payment.collectedAt);
   // Cancelled by the payer before pickup, whether or not the refund has arrived yet.
   const cancelled = !pickedUp && payment.status !== 'ready_for_pickup';
@@ -24,6 +27,10 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
       <h1 className="mt-8 text-[36px] leading-[1.05] font-semibold">
         {pickedUp ? 'Picked up. Thank you.' : cancelled ? 'This order was cancelled.' : 'Your medicine is paid for.'}
       </h1>
+
+      {scene && (
+        <OrderScene {...scene} places={{ us: 'Paid from abroad', ng: scene.places.ng }} className="h-[240px]" />
+      )}
 
       <section className="card mt-2 p-6">
         <div className="flex items-start justify-between gap-4">

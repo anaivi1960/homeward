@@ -1,6 +1,12 @@
 import type { CarePlan } from '@/lib/plans';
+import { AllowanceMeter } from './allowance-meter';
 
 export function PlanCard({ plan }: { plan: CarePlan }) {
+  const amount = Number(plan.amountUsd);
+  const allowance = plan.allowance;
+  // An order over what is left of the month's allowance needs one more deliberate tick.
+  const over = allowance && amount > allowance.remainingUsd ? amount - allowance.remainingUsd : 0;
+
   return (
     <section className="card p-5">
       <div className="flex items-start justify-between gap-4">
@@ -34,8 +40,25 @@ export function PlanCard({ plan }: { plan: CarePlan }) {
         </div>
       </div>
 
+      {allowance && (
+        <div className={`mt-5 rounded-control p-4 text-sm ${over ? 'border border-warning bg-warning/5' : 'bg-surface-muted'}`}>
+          <AllowanceMeter allowance={allowance} adding={amount} />
+          <p className={`mt-2 ${over ? 'text-warning' : 'text-text-muted'}`}>
+            {over
+              ? `This is $${over.toFixed(2)} over what is left of ${allowance.beneficiary}'s monthly allowance.`
+              : `Within ${allowance.beneficiary}'s monthly allowance.`}
+          </p>
+        </div>
+      )}
+
       <form action="/api/orders" method="post" className="mt-5">
         <input type="hidden" name="planId" value={plan.id} />
+        {over > 0 && (
+          <label className="mb-4 flex items-start gap-3 text-sm">
+            <input type="checkbox" required className="mt-0.5 size-4 accent-(--primary)" />
+            <span>I want to go over {allowance!.beneficiary}&rsquo;s allowance for this order.</span>
+          </label>
+        )}
         <button type="submit" className="btn w-full">
           Approve with PayPal
         </button>
