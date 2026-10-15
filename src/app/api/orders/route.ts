@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getMerchant } from '@/lib/merchants';
 import { createOrder } from '@/lib/paypal';
 import { getPlan } from '@/lib/plans';
+import { originOf } from '@/lib/respond';
 
 // Creates a PayPal order for a care plan and sends the payer to PayPal to approve it.
 export async function POST(request: Request) {
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
   if (!plan || !merchant) return NextResponse.json({ error: 'Unknown care plan' }, { status: 404 });
   if (plan.status === 'paid') return NextResponse.json({ error: 'This plan is already paid' }, { status: 409 });
 
-  const origin = new URL(request.url).origin;
+  const origin = originOf(request.headers);
   const order = await createOrder({
     payeeEmail: merchant.payeeEmail,
     amountUsd: plan.amountUsd,

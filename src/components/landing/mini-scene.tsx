@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 // One how-it-works tile. Models are authored in Blender: assets/homeward-scene.blend.
-function Tile({ model, still }: { model: string; still: boolean }) {
+function Tile({ model, still, onReady }: { model: string; still: boolean; onReady?: () => void }) {
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(model);
   const { mixer, actions, names } = useAnimations(animations, group);
@@ -34,6 +34,9 @@ function Tile({ model, still }: { model: string; still: boolean }) {
     return () => all.forEach((action) => void action.stop());
   }, [actions, names, mixer, still]);
 
+  // This component only renders once the model has downloaded.
+  useEffect(() => onReady?.(), [onReady]);
+
   useEffect(() => {
     camera.zoom = Math.min(size.width / 5.2, size.height / 4.3);
     camera.updateProjectionMatrix();
@@ -46,7 +49,7 @@ function Tile({ model, still }: { model: string; still: boolean }) {
   );
 }
 
-export default function MiniScene({ model }: { model: string }) {
+export default function MiniScene({ model, onReady }: { model: string; onReady?: () => void }) {
   const still = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     [],
@@ -65,7 +68,7 @@ export default function MiniScene({ model }: { model: string }) {
       <ambientLight intensity={1.15} />
       <directionalLight position={[4, 12, 9]} intensity={1.7} />
       <directionalLight position={[-6, 6, -4]} intensity={0.5} />
-      <Tile model={model} still={still} />
+      <Tile model={model} still={still} onReady={onReady} />
       <ContactShadows position={[0, -0.27, 0]} scale={9} blur={2.4} opacity={0.22} far={4} />
     </Canvas>
   );

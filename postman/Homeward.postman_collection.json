@@ -1,0 +1,490 @@
+{
+  "info": {
+    "name": "Homeward",
+    "description": "Homeward lets someone abroad pay a Nigerian pharmacy directly through PayPal and see when the medicine is picked up.\n\nTwo folders: the PayPal sandbox calls Homeward makes, and Homeward's own endpoints. Set the collection variables first. Everything runs in the PayPal sandbox; no real money moves.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "paypalBase",
+      "value": "https://api-m.sandbox.paypal.com"
+    },
+    {
+      "key": "paypalClientId",
+      "value": ""
+    },
+    {
+      "key": "paypalClientSecret",
+      "value": ""
+    },
+    {
+      "key": "merchantEmail",
+      "value": ""
+    },
+    {
+      "key": "paypalToken",
+      "value": ""
+    },
+    {
+      "key": "paypalOrderId",
+      "value": ""
+    },
+    {
+      "key": "captureId",
+      "value": ""
+    },
+    {
+      "key": "planId",
+      "value": ""
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    },
+    {
+      "key": "reportId",
+      "value": ""
+    },
+    {
+      "key": "familyToken",
+      "value": ""
+    },
+    {
+      "key": "merchantId",
+      "value": "ndidi-pharmacy"
+    },
+    {
+      "key": "pickupCode",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "PayPal sandbox",
+      "description": "The PayPal REST calls behind an order. Run them top to bottom; approving the order after step 2 happens in a browser with the sandbox payer account.",
+      "item": [
+        {
+          "name": "1. Get access token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{paypalBase}}/v1/oauth2/token",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{paypalClientId}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{paypalClientSecret}}"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('token issued', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('paypalToken', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Create order with the pharmacy as payee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{paypalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paypalBase}}/v2/checkout/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"intent\": \"CAPTURE\",\n  \"purchase_units\": [\n    {\n      \"reference_id\": \"postman-demo\",\n      \"description\": \"Amlodipine 10mg, 30 tablets\",\n      \"amount\": {\n        \"currency_code\": \"USD\",\n        \"value\": \"18.40\"\n      },\n      \"payee\": {\n        \"email_address\": \"{{merchantEmail}}\"\n      }\n    }\n  ],\n  \"payment_source\": {\n    \"paypal\": {\n      \"experience_context\": {\n        \"brand_name\": \"Homeward\",\n        \"user_action\": \"PAY_NOW\",\n        \"shipping_preference\": \"NO_SHIPPING\",\n        \"return_url\": \"https://example.com/return\",\n        \"cancel_url\": \"https://example.com/cancel\"\n      }\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The payee is the pharmacy, so the money goes to its PayPal account and not to Homeward. The approval link is printed in the Postman console."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "pm.test('order created', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "pm.collectionVariables.set('paypalOrderId', body.id);",
+                  "console.log('Approve in a browser:', (body.links.find((l) => l.rel === 'payer-action') || {}).href);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get order",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{paypalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paypalBase}}/v2/checkout/orders/{{paypalOrderId}}",
+            "description": "Shows the payee and whether the payer has approved."
+          }
+        },
+        {
+          "name": "4. Capture order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{paypalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paypalBase}}/v2/checkout/orders/{{paypalOrderId}}/capture",
+            "description": "Returns 422 ORDER_NOT_APPROVED until the payer has approved in the browser."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const unit = (pm.response.json().purchase_units || [])[0];",
+                  "const capture = unit && unit.payments && unit.payments.captures && unit.payments.captures[0];",
+                  "if (capture) pm.collectionVariables.set('captureId', capture.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Get capture",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{paypalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paypalBase}}/v2/payments/captures/{{captureId}}",
+            "description": "How Homeward confirms a refund: an order is marked refunded only when this shows status REFUNDED."
+          }
+        },
+        {
+          "name": "6. Refund capture (refused for Homeward)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{paypalToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{paypalBase}}/v2/payments/captures/{{captureId}}/refund",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "With Homeward's credentials this returns 403 PERMISSION_DENIED: only the pharmacy that was paid can refund. That is why cancelling an order asks the pharmacy to refund and then checks step 5."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Homeward",
+      "description": "Homeward's own endpoints. The form endpoints redirect a browser back to its page; with the header Accept: application/json they answer with JSON instead.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health",
+            "description": ""
+          }
+        },
+        {
+          "name": "Search partner pharmacies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/pharmacies/search?q=abakpa&state=Enugu&limit=5",
+            "description": "Searches the WellaHealth partner directory. The \"source\" field says whether the answer came from Elasticsearch or the bundled Enugu list."
+          }
+        },
+        {
+          "name": "Chat with the assistant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/chat",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Order Mum's blood-pressure medicine in Enugu\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Streams the assistant's reply and tool calls (Claude, with the PayPal Agent Toolkit and Homeward's pharmacy tools)."
+          }
+        },
+        {
+          "name": "Approve a drafted order (redirects to PayPal)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/orders",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "planId",
+                  "value": "{{planId}}"
+                }
+              ]
+            },
+            "description": "planId comes from the order card the assistant drafts."
+          }
+        },
+        {
+          "name": "Payer: cancel before pickup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/cancel",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "paymentId",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Family or payer: report a problem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/report",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{familyToken}}"
+                },
+                {
+                  "key": "reason",
+                  "value": "expired"
+                },
+                {
+                  "key": "details",
+                  "value": "Expiry date on the pack has passed."
+                }
+              ]
+            },
+            "description": "reason: wrong_item, expired, damaged, suspected_fake or other. Send token (family) or paymentId (payer)."
+          }
+        },
+        {
+          "name": "Pharmacy: list orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/merchant/{{merchantId}}/orders",
+            "description": "The rows behind the pharmacy ledger grid."
+          }
+        },
+        {
+          "name": "Pharmacy: confirm pickup with the code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/merchant/{{merchantId}}/confirm",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "paymentId",
+                  "value": "{{paymentId}}"
+                },
+                {
+                  "key": "code",
+                  "value": "{{pickupCode}}"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Pharmacy: answer a problem report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/merchant/{{merchantId}}/resolve",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "reportId",
+                  "value": "{{reportId}}"
+                },
+                {
+                  "key": "answer",
+                  "value": "replaced"
+                }
+              ]
+            },
+            "description": "answer: replaced or refund."
+          }
+        },
+        {
+          "name": "Pharmacy: I've refunded it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/merchant/{{merchantId}}/refund-check",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "paymentId",
+                  "value": "{{paymentId}}"
+                }
+              ]
+            },
+            "description": "Succeeds only if PayPal shows the capture as fully refunded."
+          }
+        },
+        {
+          "name": "PayPal webhook (unsigned, expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/webhooks/paypal",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event_type\": \"CHECKOUT.ORDER.APPROVED\",\n  \"resource\": {\n    \"id\": \"FAKE\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Shows that deliveries PayPal did not sign are rejected."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('unsigned delivery rejected', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

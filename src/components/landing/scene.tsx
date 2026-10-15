@@ -11,7 +11,13 @@ const MODEL = '/models/homeward.glb';
 const ARRIVES = 4;
 const PICKED_UP = 8.2;
 
-const stages = [
+// Where to stop the animation to show each stage of a real order.
+const HOLD_AT = [2, 6, 9.5] as const;
+
+export type Stages = { us: string; ng: string }[];
+export type Stage = 0 | 1 | 2;
+
+const demoStages: Stages = [
   { us: 'Paying Ndidi Pharmacy · $18.40', ng: 'Order on its way' },
   { us: 'Paid', ng: 'Ready for pickup' },
   { us: 'Mum picked it up · 3:14 PM', ng: 'Picked up' },
@@ -19,7 +25,21 @@ const stages = [
 
 type Anchors = { us: RefObject<HTMLDivElement | null>; ng: RefObject<HTMLDivElement | null> };
 
-function Diorama({ still, anchors, onStage }: { still: boolean; anchors: Anchors; onStage: (stage: number) => void }) {
+function Diorama({
+  still,
+  hold,
+  anchors,
+  onStage,
+  onReady,
+}: {
+  still: boolean;
+  hold?: Stage;
+  anchors: Anchors;
+  onStage: (stage: number) => void;
+  onReady?: () => void;
+}) {
+  // With `hold`, the animation plays once up to that stage and stops there.
+  const holdAt = hold === undefined ? undefined : HOLD_AT[hold];
   const group = useRef<THREE.Group>(null);
   const { scene, animations } = useGLTF(MODEL);
   const { mixer, actions, names } = useAnimations(animations, group);
@@ -33,14 +53,17 @@ function Diorama({ still, anchors, onStage }: { still: boolean; anchors: Anchors
     for (const action of all) {
       action.reset().play();
       if (still) {
-        // Reduced motion: hold on the picked-up moment.
+        // Reduced motion: hold on the stage straight away.
         action.paused = true;
-        action.time = Math.min(9.5, action.getClip().duration);
+        action.time = Math.min(holdAt ?? 9.5, action.getClip().duration);
       }
     }
     if (still) mixer.update(0);
     return () => all.forEach((action) => void action.stop());
-  }, [actions, names, mixer, still]);
+  }, [actions, names, mixer, still, holdAt]);
+
+  // This component only renders once the model has downloaded.
+  useEffect(() => onReady?.(), [onReady]);
 
   // Fit both islands at any width and height.
   useEffect(() => {
@@ -74,7 +97,15 @@ function Diorama({ still, anchors, onStage }: { still: boolean; anchors: Anchors
 
     const action = actions.Mum ?? actions[names[0]];
     if (!action) return;
-    const next = still ? 2 : action.time < ARRIVES ? 0 : action.time < PICKED_UP ? 1 : 2;
+    if (holdAt !== undefined && !action.paused && action.time >= holdAt) {
+      for (const n of names) {
+        const a = actions[n];
+        if (!a) continue;
+        a.time = Math.min(holdAt, a.getClip().duration);
+        a.paused = true;
+      }
+    }
+    const next = still ? (hold ?? 2) : action.time < ARRIVES ? 0 : action.time < PICKED_UP ? 1 : 2;
     if (next !== stage.current) {
       stage.current = next;
       onStage(next);
@@ -100,7 +131,19 @@ function Label({ anchor, place, text, done }: { anchor: RefObject<HTMLDivElement
   );
 }
 
-export default function Scene() {
+// The Houston-to-Enugu diorama. On the landing page it loops through a demo order; given
+// `hold` and `stages` it plays a real order up to where that order has got to, and stops.
+export default function Scene({
+  onReady,
+  hold,
+  stages = demoStages,
+  places = { us: 'Houston · 9:14 AM', ng: 'Enugu · 3:14 PM' },
+}: {
+  onReady?: () => void;
+  hold?: Stage;
+  stages?: Stages;
+  places?: { us: string; ng: string };
+}) {
   const still = useMemo(
     () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     [],
@@ -124,11 +167,11 @@ export default function Scene() {
         <ambientLight intensity={1.15} />
         <directionalLight position={[4, 12, 9]} intensity={1.7} />
         <directionalLight position={[-6, 6, -4]} intensity={0.5} />
-        <Diorama still={still} anchors={anchors} onStage={setStage} />
+        <Diorama still={still} hold={hold} anchors={anchors} onStage={setStage} onReady={onReady} />
         <ContactShadows position={[0, -0.31, 0]} scale={26} blur={2.6} opacity={0.22} far={6} />
       </Canvas>
-      <Label anchor={us} place="Houston · 9:14 AM" text={stages[stage].us} done={stage > 0} />
-      <Label anchor={ng} place="Enugu · 3:14 PM" text={stages[stage].ng} done={stage === 2} />
+      <Label anchor={us} place={places.us} text={stages[stage].us} done={stage > 0} />
+      <Label anchor={ng} place={places.ng} text={stages[stage].ng} done={stage === 2} />
     </div>
   );
 }

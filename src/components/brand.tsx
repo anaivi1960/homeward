@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Nav } from './nav';
 
 // Wordmark with the green diamond that marks people in the landing scene.
 export function Brand({ href = '/', suffix }: { href?: string; suffix?: string }) {
@@ -16,14 +17,7 @@ export function AppHeader() {
     <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-[720px] items-center justify-between px-4">
         <Brand />
-        <nav className="flex items-center gap-5 text-sm text-text-muted">
-          <Link href="/app" className="hover:text-text">
-            Order
-          </Link>
-          <Link href="/payments" className="hover:text-text">
-            Orders &amp; pickups
-          </Link>
-        </nav>
+        <Nav />
       </div>
     </header>
   );

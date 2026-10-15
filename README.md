@@ -10,16 +10,21 @@ Built for the PayPal AI Hackathon 2026. It runs entirely in the PayPal sandbox; 
 
 Work in progress.
 
-- Working: landing page with a 3D scene, chat with the agent, pharmacy search, order drafting, PayPal order paid directly to a pharmacy's sandbox account, Postgres storage, pickup codes, family pickup page (`/b/<token>`), pharmacy portal (`/merchant/ndidi-pharmacy`), orders and pickups (`/payments`).
-- Awaiting one full run with a real sandbox approval: capture on return from PayPal through to the pickup code.
-- Not built yet: receipt verification, recurring orders, webhooks, pharmacy login, delivery tracking.
+- Working: landing page with 3D scenes, chat with the agent, pharmacy search, order drafting, PayPal order paid directly to a pharmacy's sandbox account, Postgres storage, pickup codes, family pickup page (`/b/<token>`), pharmacy counter (`/merchant/ndidi-pharmacy`) and order ledger (`/merchant/ndidi-pharmacy/ledger`), orders and pickups (`/payments`), partner pharmacy map and directory (`/pharmacies`), cancelling before pickup, and reporting a problem after pickup.
+- Built but not yet run against live PayPal traffic: the webhook (`/api/webhooks/paypal`), which needs a deployed URL registered with PayPal.
+- Refunds are sent by the pharmacy from its own PayPal account. PayPal does not let Homeward refund a payment made to a pharmacy, so Homeward switches the pickup code off, asks the pharmacy to refund, and checks with PayPal that it happened.
+- Not built yet: receipt verification, recurring orders, pharmacy login, delivery tracking.
 
 ## Stack
 
 - Next.js (App Router), TypeScript, Tailwind CSS
-- 3D landing scene modelled and animated in Blender (`assets/homeward-scene.blend`), shown with three.js
+- 3D scenes modelled and animated in Blender (`assets/homeward-scene.blend`), shown with three.js
 - Claude through the Vercel AI SDK
-- PayPal Orders API and the [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit)
+- PayPal Orders and Payments APIs, PayPal webhooks, and the [PayPal Agent Toolkit](https://github.com/paypal/agent-toolkit)
+- [AG Grid](https://www.ag-grid.com/) for the pharmacy order ledger and the partner directory
+- [Render](https://render.com/) for hosting (`render.yaml`)
+- Optional: an outgoing webhook for notifications (works with open-source tools such as [n8n](https://n8n.io/)), [Elasticsearch](https://www.elastic.co/) for partner-pharmacy search
+- A [Postman](https://www.postman.com/) collection of every API call (`postman/`)
 
 ## Run it locally
 
@@ -42,6 +47,28 @@ Requires Node 20 or later.
 4. Open http://localhost:3000, open the app, ask for something (for example "Order Mum's blood-pressure medicine in Enugu"), and approve the plan with the personal sandbox account.
 
 `node --env-file=.env scripts/gate-order.mjs` checks that your sandbox app can create an order naming a merchant as payee.
+
+## Deploy to Render
+
+1. Push this repository to GitHub.
+2. In Render choose **New > Blueprint** and pick the repository. `render.yaml` describes the service.
+3. Fill in the environment variables Render asks for (the same values as your `.env`).
+4. After the first deploy, register `https://<your-service>.onrender.com/api/webhooks/paypal` as a webhook in the PayPal developer dashboard for the events `CHECKOUT.ORDER.APPROVED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.REFUNDED` and `PAYMENT.CAPTURE.REVERSED`, then set `PAYPAL_WEBHOOK_ID` in Render to the id PayPal gives it.
+
+## Optional integrations
+
+**Notifications.** Set `NOTIFY_WEBHOOK_URL` to any URL that accepts a JSON POST, for example a Webhook trigger in a self-hosted [n8n](https://n8n.io/) or [Activepieces](https://www.activepieces.com/) workflow. Homeward posts a JSON event to it when an order is paid (`order.paid`), picked up (`order.picked_up`), cancelled (`order.cancel_requested`) or refunded (`order.refunded`), and when a problem is reported (`problem.reported`) or answered (`problem.answered`). Each event carries the pharmacy, the items, the amount, and `pickupUrl`, the link to text to the family member.
+
+**Elasticsearch.** Set `ELASTICSEARCH_URL` and `ELASTICSEARCH_API_KEY`, then load the WellaHealth partner directory:
+
+```bash
+node --env-file=.env scripts/index-pharmacies.mjs          # Enugu
+node --env-file=.env scripts/index-pharmacies.mjs --all    # every state
+```
+
+`/api/pharmacies/search` and the assistant's pharmacy lookup then search that index, with typo tolerance. Without it they search the Enugu list bundled with the app.
+
+**Postman.** Import `postman/Homeward.postman_collection.json` and set the collection variables. It has the PayPal sandbox calls Homeward makes, in order, and Homeward's own endpoints.
 
 ## Licence
 

@@ -1,6 +1,8 @@
 const styles = {
-  ready_for_pickup: { label: 'Ready for pickup', chip: 'bg-surface-muted text-text-muted', dot: 'bg-text-muted animate-pulse' },
+  ready_for_pickup: { label: 'Ready for pickup', chip: 'border border-text text-text', dot: 'bg-signal animate-pulse' },
   collected: { label: 'Picked up', chip: 'bg-signal/15 text-accent', dot: 'bg-signal' },
+  refund_due: { label: 'Refund due', chip: 'border border-warning text-warning', dot: 'bg-warning' },
+  refunded: { label: 'Refunded', chip: 'bg-surface-muted text-text-muted', dot: 'bg-text-muted' },
 } as const;
 
 export function StatusChip({ status }: { status: keyof typeof styles }) {

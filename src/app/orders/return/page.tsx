@@ -1,7 +1,9 @@
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { AppHeader } from '@/components/brand';
-import { captureOrder, getOrder } from '@/lib/paypal';
-import { getPlan, recordPayment } from '@/lib/plans';
+import { ShareLink } from '@/components/share-link';
+import { settleOrder } from '@/lib/plans';
+import { originOf } from '@/lib/respond';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,15 +12,10 @@ export default async function OrderReturn({ searchParams }: { searchParams: Prom
   const { token } = await searchParams;
   if (!token) return <Failed detail="This page needs a PayPal order." />;
 
-  const capture = await captureOrder(token);
-  // A refresh re-posts the capture; fall back to the stored order instead of failing.
-  const order = capture.ok ? capture.body : (await getOrder(token)).body;
-  if (order.status !== 'COMPLETED') return <Failed detail="Nothing was charged. Go back and try again." />;
-
-  const unit = order.purchase_units?.[0];
-  const captured = unit?.payments?.captures?.[0];
-  const plan = await getPlan(unit?.reference_id);
-  const payment = plan && (await recordPayment(plan, order.id, captured?.amount?.value ?? plan.amountUsd));
+  const settled = await settleOrder(token);
+  if (!settled) return <Failed detail="Nothing was charged. Go back and try again." />;
+  const { order, captured, plan, payment } = settled;
+  const origin = originOf(await headers());
 
   return (
     <>
@@ -45,19 +42,22 @@ export default async function OrderReturn({ searchParams }: { searchParams: Prom
             <p className="mt-1 text-sm text-text-muted">
               It shows the pickup code to give {plan.merchantName}. You&rsquo;ll see it here the moment it&rsquo;s picked up.
             </p>
-            <Link
-              href={`/b/${payment.beneficiaryToken}`}
-              className="mt-4 block rounded-control bg-surface-muted px-4 py-3 font-mono text-sm break-all hover:text-accent"
-            >
-              /b/{payment.beneficiaryToken}
-            </Link>
+            <ShareLink
+              url={`${origin}/b/${payment.beneficiaryToken}`}
+              message={`Your medicine is paid for at ${plan.merchantName}. Open this for your pickup code:`}
+            />
           </section>
         )}
 
         <div className="mt-4 flex flex-wrap gap-3">
-          <Link href="/payments" className="btn">
+          <Link href="/payments" className="btn btn-ghost">
             Track pickup
           </Link>
+          {payment && (
+            <Link href={`/receipt/${payment.id}`} className="btn btn-ghost">
+              Receipt
+            </Link>
+          )}
           <Link href="/app" className="btn btn-ghost">
             New order
           </Link>
