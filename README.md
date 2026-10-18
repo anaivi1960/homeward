@@ -10,10 +10,14 @@ Built for the PayPal AI Hackathon 2026. It runs entirely in the PayPal sandbox; 
 
 Work in progress.
 
-- Working: landing page with 3D scenes, chat with the agent, pharmacy search, order drafting, PayPal order paid directly to a pharmacy's sandbox account, Postgres storage, pickup codes, family pickup page (`/b/<token>`), pharmacy counter (`/merchant/ndidi-pharmacy`) and order ledger (`/merchant/ndidi-pharmacy/ledger`), orders and pickups (`/payments`), partner pharmacy map and directory (`/pharmacies`), cancelling before pickup, and reporting a problem after pickup.
-- Built but not yet run against live PayPal traffic: the webhook (`/api/webhooks/paypal`), which needs a deployed URL registered with PayPal.
+Live (PayPal sandbox): https://homeward-auzn.onrender.com. The free Render plan sleeps when idle, so the first request can take up to a minute.
+
+- Working: landing page with 3D scenes, chat with the agent (including reading a photo of a prescription back for confirmation), pharmacy search, order drafting, PayPal order paid directly to a pharmacy's sandbox account, Postgres storage, pickup codes, family pickup page (`/b/<token>`), pharmacy counter (`/merchant/ndidi-pharmacy`) and order ledger (`/merchant/ndidi-pharmacy/ledger`), orders and pickups (`/payments`) with a live order scene, monthly refills and monthly allowances per family member, a handover photo taken by the pharmacy at pickup, receipts (`/receipt/<paymentId>`), partner pharmacy map and directory (`/pharmacies`), cancelling before pickup, and reporting a problem after pickup.
+- The PayPal webhook (`/api/webhooks/paypal`) is registered for the deployed site and has handled real sandbox deliveries.
 - Refunds are sent by the pharmacy from its own PayPal account. PayPal does not let Homeward refund a payment made to a pharmacy, so Homeward switches the pickup code off, asks the pharmacy to refund, and checks with PayPal that it happened.
-- Not built yet: receipt verification, recurring orders, pharmacy login, delivery tracking.
+- Refills are drafted when the orders page loads; there is no background scheduler yet.
+- WellaHealth partner pharmacies are shown in the directory but cannot take orders yet; ordering uses three sandbox-backed demo pharmacies.
+- Not built yet: pharmacy login, photos on problem reports, escalation after the 48-hour problem window, delivery tracking.
 
 ## Stack
 

@@ -123,8 +123,8 @@ function Label({ anchor, place, text, done }: { anchor: RefObject<HTMLDivElement
   return (
     <div ref={anchor} className="pointer-events-none absolute top-0 left-0 flex w-max flex-col items-center gap-1.5 opacity-0">
       <span className="label text-text-muted">{place}</span>
-      <span className="flex items-center gap-2 rounded-full border border-border bg-surface/90 px-3 py-1.5 text-xs font-medium whitespace-nowrap shadow-sm backdrop-blur">
-        <span className={`block size-1.5 rotate-45 ${done ? 'bg-signal' : 'bg-text-muted'}`} />
+      <span className="flex max-w-36 items-center gap-2 rounded-2xl border border-border bg-surface/90 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur sm:max-w-none sm:rounded-full sm:whitespace-nowrap">
+        <span className={`block size-1.5 shrink-0 rotate-45 ${done ? 'bg-signal' : 'bg-text-muted'}`} />
         {text}
       </span>
     </div>
