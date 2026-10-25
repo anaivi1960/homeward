@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { AutoRefresh } from '@/components/auto-refresh';
 import { OrderScene } from '@/components/order-scene';
+import { CheckSummary, PickupCheck } from '@/components/pickup-check';
 import { Brand } from '@/components/brand';
 import { ReportForm, ReportStatus } from '@/components/problem-report';
 import { formatTime, StatusChip } from '@/components/status-chip';
@@ -14,7 +15,7 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
   const { token } = await params;
   const found = await getPaymentByToken(token);
   if (!found) notFound();
-  const { payment, plan, report } = found;
+  const { payment, plan, report, check } = found;
   const scene = orderStage(payment, plan);
   const pickedUp = Boolean(payment.collectedAt);
   // Cancelled by the payer before pickup, whether or not the refund has arrived yet.
@@ -51,8 +52,19 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
         {pickedUp ? (
           <>
             <p className="mt-5 text-sm text-text-muted">
-              Picked up {payment.collectedAt && formatTime(payment.collectedAt)}.
+              Picked up {payment.collectedAt && formatTime(payment.collectedAt)}
+              {check?.confirmedPickup && ", confirmed by your photo"}.
             </p>
+            {check && (
+              <div className="mt-5">
+                <CheckSummary check={check} paymentId={payment.id} />
+              </div>
+            )}
+            {payment.status === 'collected' && check?.verdict !== 'match' && (
+              <div className="mt-5">
+                <PickupCheck token={token} waiting={false} />
+              </div>
+            )}
             <div className="mt-5">
               {report ? (
                 <ReportStatus report={report} pharmacy={plan.merchantName} />
@@ -76,6 +88,14 @@ export default async function BeneficiaryPage({ params }: { params: Promise<{ to
             <p className="mt-4 text-sm text-text-muted">
               Nothing to pay. Bring the prescription if the medicine needs one, and don&rsquo;t share this code.
             </p>
+            {check && (
+              <div className="mt-5">
+                <CheckSummary check={check} paymentId={payment.id} />
+              </div>
+            )}
+            <div className="mt-5 border-t border-border pt-5">
+              <PickupCheck token={token} waiting />
+            </div>
           </>
         )}
       </section>

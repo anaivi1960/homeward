@@ -191,9 +191,9 @@ export function Chat() {
               placeholder={photo ? 'Add a note (optional)' : 'Which medicine, and for whom?'}
               aria-label="Message"
               name="message"
-              className="min-h-11 flex-1 bg-transparent outline-none placeholder:text-text-muted"
+              className="min-h-11 min-w-0 flex-1 bg-transparent outline-none placeholder:text-text-muted"
             />
-            <button type="submit" disabled={busy || reading || (!input.trim() && !photo)} className="btn px-5">
+            <button type="submit" disabled={busy || reading || (!input.trim() && !photo)} className="btn shrink-0 px-5">
               Send
             </button>
           </div>

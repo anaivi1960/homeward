@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Brand } from '@/components/brand';
+import { CheckSummary } from '@/components/pickup-check';
 import { ReceiptActions } from '@/components/receipt-actions';
 import { formatTime, StatusChip } from '@/components/status-chip';
 import { getOrder } from '@/lib/paypal';
@@ -15,7 +16,7 @@ export default async function Receipt({ params }: { params: Promise<{ paymentId:
   const { paymentId } = await params;
   const found = await getPaymentById(paymentId);
   if (!found) notFound();
-  const { payment, plan, photoAt } = found;
+  const { payment, plan, photoAt, check } = found;
 
   // The capture id is PayPal's own reference for the money moving; fine to leave out if PayPal is slow.
   const order = await getOrder(payment.paypalOrderId).catch(() => undefined);
@@ -90,6 +91,13 @@ export default async function Receipt({ params }: { params: Promise<{ paymentId:
             />
             <figcaption className="label mt-2 text-text-muted">Handover photo · {formatTime(photoAt)}</figcaption>
           </figure>
+        )}
+
+        {check && (
+          <div className="mt-6">
+            <p className="label mb-2 text-text-muted">Photo from {plan.beneficiary} · {formatTime(check.createdAt)}</p>
+            <CheckSummary check={check} paymentId={payment.id} />
+          </div>
         )}
 
         <p className="mt-6 text-xs text-text-muted">

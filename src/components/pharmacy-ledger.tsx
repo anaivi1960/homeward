@@ -205,14 +205,14 @@ export function PharmacyLedger({ merchantId, initialRows }: { merchantId: string
         />
       )}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap rounded-full border border-border bg-surface p-1 text-xs font-medium">
+        <div className="flex max-w-full overflow-x-auto rounded-full border border-border bg-surface p-1 text-xs font-medium [scrollbar-width:none]">
           {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
               aria-pressed={tab === t.id}
-              className={`rounded-full px-3 py-1.5 ${tab === t.id ? 'bg-primary text-on-primary' : 'text-text-muted hover:text-text'}`}
+              className={`shrink-0 rounded-full px-3 py-1.5 whitespace-nowrap ${tab === t.id ? 'bg-primary text-on-primary' : 'text-text-muted hover:text-text'}`}
             >
               {t.label} · {counts[t.id]}
             </button>
