@@ -4,6 +4,7 @@ import { AutoRefresh } from '@/components/auto-refresh';
 import { AppHeader } from '@/components/brand';
 import { OrderScene } from '@/components/order-scene';
 import { PageIntro } from '@/components/page-intro';
+import { CheckSummary } from '@/components/pickup-check';
 import { ReportForm, ReportStatus } from '@/components/problem-report';
 import { formatTime, StatusChip } from '@/components/status-chip';
 import { listAllowances } from '@/lib/allowances';
@@ -153,7 +154,7 @@ export default async function Payments() {
           </section>
         )}
 
-        {rows.map(({ payment, plan, report, photoAt }) => {
+        {rows.map(({ payment, plan, report, photoAt, check }) => {
           const pickedUp = Boolean(payment.collectedAt);
           const refundDue = payment.status === 'refund_due';
           const refunded = payment.status === 'refunded';
@@ -179,7 +180,16 @@ export default async function Payments() {
                 <Step done text={`You paid $${payment.amountUsd} USD`} time={formatTime(payment.paidAt)} />
                 <Step done text={`Pickup code issued for ${plan.beneficiary}`} time={formatTime(payment.paidAt)} />
                 {pickedUp ? (
-                  <Step done text={`${plan.beneficiary} picked it up`} time={formatTime(payment.collectedAt!)}>
+                  <Step
+                    done
+                    text={`${plan.beneficiary} picked it up${check?.confirmedPickup ? ', confirmed by their photo' : ''}`}
+                    time={formatTime(payment.collectedAt!)}
+                  >
+                    {check && (
+                      <div className="mt-2">
+                        <CheckSummary check={check} paymentId={payment.id} />
+                      </div>
+                    )}
                     {photoAt && (
                       <a href={`/api/orders/${payment.id}/photo`} target="_blank" rel="noreferrer" className="mt-2 block w-fit">
                         {/* eslint-disable-next-line @next/next/no-img-element -- served by our own route, already small */}

@@ -88,3 +88,19 @@ export const handoverPhotos = pgTable('handover_photos', {
   image: text('image').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+export type PickupCheckItem = { name: string; seen: 'yes' | 'no' | 'unclear'; note: string };
+
+// The family member's own photo of what they collected, read by Claude against the order.
+// `confirmedPickup` is true when this photo is what marked the order as picked up.
+export const pickupChecks = pgTable('pickup_checks', {
+  paymentId: uuid('payment_id')
+    .primaryKey()
+    .references(() => payments.id),
+  image: text('image').notNull(),
+  verdict: text('verdict').$type<'match' | 'mismatch' | 'unclear'>().notNull(),
+  summary: text('summary').notNull(),
+  items: jsonb('items').$type<PickupCheckItem[]>().notNull(),
+  confirmedPickup: boolean('confirmed_pickup').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

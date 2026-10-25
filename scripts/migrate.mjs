@@ -70,5 +70,16 @@ await sql`
     created_at timestamptz not null default now()
   )`;
 
+await sql`
+  create table if not exists pickup_checks (
+    payment_id uuid primary key references payments (id),
+    image text not null,
+    verdict text not null,
+    summary text not null,
+    items jsonb not null,
+    confirmed_pickup boolean not null default false,
+    created_at timestamptz not null default now()
+  )`;
+
 const tables = await sql`select table_name from information_schema.tables where table_schema = 'public' order by 1`;
 console.log('tables:', tables.map((t) => t.table_name).join(', '));

@@ -5,6 +5,7 @@ import {
   carePlans,
   handoverPhotos,
   payments,
+  pickupChecks,
   type PlanItem,
   type ProblemReason,
   problemReasons,
@@ -96,7 +97,7 @@ const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newPickupCode = () => Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
 
 // Tells the notification webhook about an order event, with enough detail to write a message from.
-async function announce(event: OrderEvent, paymentId: string, extra: Record<string, unknown> = {}) {
+export async function announce(event: OrderEvent, paymentId: string, extra: Record<string, unknown> = {}) {
   if (!process.env.NOTIFY_WEBHOOK_URL) return;
   const [row] = await paymentWithPlan().where(eq(payments.id, paymentId));
   if (!row) return;
@@ -233,27 +234,50 @@ export async function resolveProblem(merchantId: string, reportId: string, answe
 
 const paymentWithPlan = () =>
   db
-    .select({ payment: payments, plan: carePlans, report: problemReports, photoAt: handoverPhotos.createdAt })
+    .select({
+      payment: payments,
+      plan: carePlans,
+      report: problemReports,
+      photoAt: handoverPhotos.createdAt,
+      check: {
+        verdict: pickupChecks.verdict,
+        summary: pickupChecks.summary,
+        items: pickupChecks.items,
+        confirmedPickup: pickupChecks.confirmedPickup,
+        createdAt: pickupChecks.createdAt,
+      },
+    })
     .from(payments)
     .innerJoin(carePlans, eq(payments.planId, carePlans.id))
     .leftJoin(problemReports, eq(problemReports.paymentId, payments.id))
-    .leftJoin(handoverPhotos, eq(handoverPhotos.paymentId, payments.id));
+    .leftJoin(handoverPhotos, eq(handoverPhotos.paymentId, payments.id))
+    .leftJoin(pickupChecks, eq(pickupChecks.paymentId, payments.id));
+
+type Row = Awaited<ReturnType<ReturnType<typeof paymentWithPlan>["execute"]>>[number];
+const shaped = (row: Row) => ({
+  payment: row.payment,
+  plan: withMerchant(row.plan),
+  report: row.report,
+  photoAt: row.photoAt,
+  // A left join gives an object of nulls when there is no check.
+  check: row.check?.verdict ? row.check : null,
+});
 
 export async function getPaymentByToken(token: string) {
   const [row] = await paymentWithPlan().where(eq(payments.beneficiaryToken, token));
-  return row && { payment: row.payment, plan: withMerchant(row.plan), report: row.report, photoAt: row.photoAt };
+  return row && shaped(row);
 }
 
 export async function getPaymentById(id: string) {
   if (!UUID.test(id)) return undefined;
   const [row] = await paymentWithPlan().where(eq(payments.id, id));
-  return row && { payment: row.payment, plan: withMerchant(row.plan), report: row.report, photoAt: row.photoAt };
+  return row && shaped(row);
 }
 
 export async function listPayments(merchantId?: string) {
   const query = paymentWithPlan();
   const rows = await (merchantId ? query.where(eq(payments.merchantId, merchantId)) : query).orderBy(desc(payments.paidAt));
-  return rows.map((row) => ({ payment: row.payment, plan: withMerchant(row.plan), report: row.report, photoAt: row.photoAt }));
+  return rows.map(shaped);
 }
 
 // The merchant confirms handover by entering the beneficiary's pickup code.

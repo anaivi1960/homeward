@@ -5,6 +5,7 @@
 export type OrderEvent =
   | 'order.paid'
   | 'order.picked_up'
+  | 'order.pickup_checked'
   | 'order.cancel_requested'
   | 'order.refunded'
   | 'problem.reported'
